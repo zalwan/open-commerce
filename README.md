@@ -1,136 +1,97 @@
-# AI-Native Repository Standard v1.0
+# Open Commerce
 
-A technology-agnostic repository standard that provides structured engineering context for humans and AI agents.
+An open source single-vendor e-commerce app (one seller): product catalog, cart, checkout, and operations admin. **Go** backend, **SvelteKit** frontend, **Postgres** database. MIT-licensed, fork-friendly.
 
-## What Is This?
+## Features (v0.2)
 
-AI-Native Repository Standard is a technology-agnostic repository standard designed to provide structured engineering context for humans and AI agents.
+- **Storefront:** catalog + search, product detail, per-session cart, checkout, order success page.
+- **Admin:** login, product CRUD (create/edit/delete), order list, advance status (`paid → shipped → done`).
+- **Versioned REST API** `/api/v1/*` — contract in [`docs/system/components.md`](docs/system/components.md).
+- **In-repo payment & auth stubs** (deterministic mocks, no real money) — replaced by real integrations via ADR.
+- **Two run modes:** memory (no DB, auto-seed) or Postgres (auto-applied migrations + seed-on-empty).
+- **Health:** `GET /healthz` (liveness), `GET /readyz` (readiness, pings DB when configured).
 
-It defines:
+## Tech Stack
 
-- a reusable repository structure,
-- an AI instruction layer (`.ai/`, `AGENTS.md`),
-- system knowledge templates (`docs/system/`),
-- an architecture decision system (`docs/decisions/`),
-- task workflows and checklists,
-- a context model with explicit source-of-truth and drift handling,
-- machine-readable project metadata (`.ai/project.yaml`),
-- a reference example (`examples/task-tracker/`).
+| Layer | Choice |
+|-------|--------|
+| Backend | Go 1.25, stdlib `net/http`, `pgx/v5` (only external dep) |
+| Frontend | SvelteKit 2, Svelte 4, strict TypeScript, Vite 5 |
+| Database | Postgres 16 (active when `DATABASE_URL` is set), in-memory fallback |
+| Local infra | Docker Compose (`api`, `web`, `db`) |
+| CI | GitHub Actions: `go vet` + unit + integration + `npm run check` + build |
 
-The canonical definition is [`SPECIFICATION.md`](./SPECIFICATION.md). Agent behavior is defined in [`AGENTS.md`](./AGENTS.md).
+Architecture: modular monolith (handler → service → store) + client-server. Decisions recorded in [`docs/decisions/`](docs/decisions/) (ADR-0001 through 0003).
 
-## Why?
+## Quickstart
 
-Modern AI coding agents are capable of modifying large codebases, but their effectiveness depends heavily on the quality and structure of available context.
+Prerequisites: Go ≥ 1.25, Node ≥ 22. Optional: Docker for Postgres.
 
-This standard organizes that context.
+**Without a DB (fastest):**
 
-Without it, agents infer architecture from filenames, invent missing decisions, and drift from intent. With it, agents discover the minimum sufficient context progressively, respect boundaries and constraints, and keep documentation current with implementation.
+```sh
+# terminal 1 — API on :8080
+cd app/backend && go run ./cmd/api
 
-## Core Model
-
-```text
-Instructions
-    ↓
-.ai/
-
-Knowledge
-    ↓
-docs/
-
-Implementation
-    ↓
-app/
-
-Infrastructure
-    ↓
-infra/
-
-Tests
-    ↓
-tests/
-
-Decision History
-    ↓
-docs/decisions/
+# terminal 2 — web on :5173
+cd app/frontend && npm install && npm run dev
 ```
 
-| Layer | Location | Role |
-|-------|----------|------|
-| Instructions | `.ai/`, `AGENTS.md` | How to operate. Never system-specific docs. |
-| Knowledge | `docs/system/` | Intended architecture, components, dependencies, constraints. |
-| Implementation | `app/`, `config/` | What actually exists. |
-| Infrastructure | `infra/` | Environment and platform definitions. |
-| Tests | `tests/` | Verification. |
-| Decision History | `docs/decisions/` | Why important choices were made. Immutable. |
+**With Postgres (persistent):**
 
-When layers conflict, the agent reports the conflict instead of silently choosing (see `AGENTS.md` §3, §9–§10).
-
-## Design Goals
-
-- technology agnostic
-- AI-friendly
-- human-friendly
-- progressive context discovery
-- explicit architecture
-- explicit constraints
-- traceable architectural decisions
-- portable across AI coding agents
-
-## Non-Goals
-
-v1.0 explicitly does **not** include:
-
-- AI model
-- AI API
-- RAG
-- vector database
-- CLI
-- cloud platform
-- deployment framework
-
-These are out of scope for the standard itself. They may appear in adopting projects or future extensions, but the core standard does not require them.
-
-## Repository Layout
-
-```text
-.
-├── AGENTS.md
-├── README.md
-├── SPECIFICATION.md
-├── LICENSE
-├── .gitignore
-├── .ai/
-├── app/
-├── infra/
-├── config/
-├── tests/
-├── docs/
-├── examples/task-tracker/
-└── .github/workflows/
+```sh
+docker compose -f infra/compose.yaml up db
+cd app/backend && DATABASE_URL='postgres://opencommerce:opencommerce@localhost:5432/opencommerce?sslmode=disable' go run ./cmd/api
 ```
 
-See [`.ai/context.md`](./.ai/context.md) for the navigation map.
+Open http://localhost:5173. Try: catalog → add to cart → checkout (any email) → success page. Admin at http://localhost:5173/admin with dev-only dummy credentials **`admin@shop.test` / `admin123`** (not for production).
 
-## Adoption
+Quick verification (requires the API running): `sh tests/smoke.sh`.
 
-1. Clone or copy this repository as a starting point.
-2. Fill `docs/system/project.md` and `docs/system/technology.md` for your stack.
-3. Declare your architecture in `docs/system/architecture.md` and `components.md`.
-4. Record dependencies and constraints.
-5. Create your first ADR in `docs/decisions/` when the first architectural decision is made.
-6. Fill `.ai/project.yaml` metadata.
-7. Define stack-specific rules in `docs/development/conventions.md` and `docs/development/setup.md`.
-8. Review the example in `examples/task-tracker/` for a populated illustration (example stack only — not part of the core standard).
+## Repo Structure
 
-## Example
+```text
+app/backend/    Go API (cmd/api, internal/{catalog,cart,order,auth,payment,http,db})
+app/frontend/   SvelteKit (catalog/cart/checkout/orders/admin routes, lib/api.ts)
+config/         app.yaml — defaults (env overrides: PORT, DATABASE_URL, PUBLIC_API_BASE_URL)
+infra/          compose.yaml, Dockerfile.api/web
+tests/          smoke.sh — E2E (health, checkout, admin CRUD, 401 guard)
+docs/system/    project, technology, architecture, components, dependencies, constraints
+docs/decisions/ ADRs 0001–0003 (stack, stubs, Postgres)
+```
 
-`examples/task-tracker/` demonstrates how a concrete project fills the generic template: populated system docs, one ADR, and adapted agent files. Its specific technology choices are **example-only** and impose no requirement on adopters.
+## Configuration
 
-## Versioning
+| Env | Default | Notes |
+|-----|---------|-------|
+| `PORT` | `8080` | API port |
+| `DATABASE_URL` | _(empty → memory)_ | Example: `postgres://opencommerce:opencommerce@localhost:5432/opencommerce?sslmode=disable` |
+| `PUBLIC_API_BASE_URL` | `http://localhost:8080` | API base URL for the frontend |
 
-Standard versioning is `MAJOR.MINOR.PATCH` (see `SPECIFICATION.md` §18). This release is **1.0.0**.
+Never commit secrets — only documented dummy credentials.
+
+## Testing
+
+```sh
+cd app/backend && go vet ./... && go test ./... && go build ./...
+# integration (requires Postgres):
+DATABASE_URL='postgres://...' go test -tags integration ./...
+
+cd app/frontend && npm run check && npm run build
+```
+
+## Roadmap
+
+- v0.1 — foundation + skeleton ✅
+- v0.2 — Postgres + full admin ✅ (current)
+- v0.3 — candidates: real payment (sandbox), real auth (JWT/OAuth), `order_items` normalization, pagination/search, public deploy. Real payment/auth require an ADR.
+
+Binding non-goals: multi-vendor/marketplace, native mobile, ERP sync (see [`docs/system/project.md`](docs/system/project.md)).
+
+## Contributing
+
+Read [`AGENTS.md`](AGENTS.md) (workflow), [`docs/development/setup.md`](docs/development/setup.md), and [`docs/development/conventions.md`](docs/development/conventions.md). Branch `feat/<slug>`; commits `<type>: <summary>`; PRs must be green (backend + frontend). Architectural changes need a new ADR — never edit old ADRs.
 
 ## License
 
-MIT — see [`LICENSE`](./LICENSE).
+MIT — see [`LICENSE`](LICENSE).
