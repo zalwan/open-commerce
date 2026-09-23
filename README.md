@@ -5,6 +5,7 @@ An open source single-vendor e-commerce app (one seller): product catalog, cart,
 ## Features (v0.2)
 
 - **Storefront:** catalog + search, product detail, per-session cart, checkout, order success page.
+- **Stock safety:** atomic reservation at checkout (409 when insufficient), restock on payment failure or cancel-from-paid.
 - **Admin:** login, product CRUD (create/edit/delete), order list, advance status (`paid → shipped → done`).
 - **Versioned REST API** `/api/v1/*` — contract in [`docs/system/components.md`](docs/system/components.md).
 - **In-repo payment & auth stubs** (deterministic mocks, no real money) — replaced by real integrations via ADR.

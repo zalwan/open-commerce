@@ -14,7 +14,10 @@
 			const order = await api.checkout(getSessionId(), email);
 			await goto(`/orders/${order.id}`);
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Checkout gagal';
+			const msg = e instanceof Error ? e.message : 'Checkout gagal';
+			error = msg.includes('409')
+				? 'Stok tidak cukup untuk sebagian produk — kurangi qty atau kembali lagi nanti.'
+				: msg;
 		} finally {
 			loading = false;
 		}

@@ -26,14 +26,21 @@ type Store interface {
 	Get(ctx context.Context, id string) (Product, error)
 	Save(ctx context.Context, p Product) error
 	Delete(ctx context.Context, id string) error
+	// DecrementStock atomically reduces stock, failing with
+	// ErrInsufficientStock when stock < qty. Used by checkout.
+	DecrementStock(ctx context.Context, id string, qty int) error
+	// IncrementStock restores stock (payment failure compensation, cancel).
+	IncrementStock(ctx context.Context, id string, qty int) error
 }
 
 var (
-	ErrNotFound      = errors.New("product not found")
-	ErrInvalidName   = errors.New("name is required")
-	ErrInvalidPrice  = errors.New("priceMinor must be > 0")
-	ErrInvalidStock  = errors.New("stock must be >= 0")
-	ErrAlreadyExists = errors.New("product already exists")
+	ErrNotFound          = errors.New("product not found")
+	ErrInvalidName       = errors.New("name is required")
+	ErrInvalidPrice      = errors.New("priceMinor must be > 0")
+	ErrInvalidStock      = errors.New("stock must be >= 0")
+	ErrAlreadyExists     = errors.New("product already exists")
+	ErrBadQty            = errors.New("qty must be > 0")
+	ErrInsufficientStock = errors.New("insufficient stock")
 )
 
 // Service enforces catalog rules; handlers must go through it.
@@ -125,4 +132,20 @@ func (s *Service) Update(ctx context.Context, p Product) (Product, error) {
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.store.Delete(ctx, id)
+}
+
+// DecrementStock reserves stock for checkout. qty must be > 0.
+func (s *Service) DecrementStock(ctx context.Context, id string, qty int) error {
+	if qty <= 0 {
+		return ErrBadQty
+	}
+	return s.store.DecrementStock(ctx, id, qty)
+}
+
+// IncrementStock restores previously reserved stock.
+func (s *Service) IncrementStock(ctx context.Context, id string, qty int) error {
+	if qty <= 0 {
+		return ErrBadQty
+	}
+	return s.store.IncrementStock(ctx, id, qty)
 }

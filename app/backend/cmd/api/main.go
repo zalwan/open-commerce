@@ -57,7 +57,7 @@ func main() {
 	catalogSvc := catalog.NewService(catalogStore)
 	cartSvc := cart.NewService(cartStore, catalogSvc)
 	pay := payment.NewStub()
-	orderSvc := order.NewService(orderStore, cartSvc, pay)
+	orderSvc := order.NewService(orderStore, cartSvc, catalogSvc, pay)
 	authSvc := auth.NewService()
 
 	router := httpapi.NewRouter(httpapi.Deps{

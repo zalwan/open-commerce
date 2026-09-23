@@ -8,6 +8,7 @@
 - Migrasi DB hanya aditif (`CREATE TABLE/INDEX IF NOT EXISTS`, sequence). Alter destruktif (DROP/RENAME kolom) butuh ADR + rencana migrasi data.
 - Frontend: TypeScript strict, tidak ada `any` tanpa alasan; SvelteKit file-routing tetap dipakai (jangan custom router).
 - Data: harga dalam minor units (`priceMinor` int64, mis. rupiah sen) — tidak ada float untuk uang.
+- Checkout tidak boleh oversell: reservasi via decrement atomik; stok tidak cukup → 409 tanpa order; batal dari `paid` wajib restock.
 
 ## Business Constraints
 

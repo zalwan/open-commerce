@@ -44,6 +44,9 @@ func orderErr(w http.ResponseWriter, err error) {
 		errors.Is(err, order.ErrEmptyCart),
 		errors.Is(err, order.ErrBadStatus):
 		writeErr(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, catalog.ErrInsufficientStock),
+		errors.Is(err, catalog.ErrNotFound):
+		writeErr(w, http.StatusConflict, err.Error())
 	default:
 		writeErr(w, http.StatusInternalServerError, "internal error")
 	}

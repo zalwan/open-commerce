@@ -73,6 +73,32 @@ func (s *PGStore) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// DecrementStock is a single atomic UPDATE: concurrent checkouts cannot oversell.
+func (s *PGStore) DecrementStock(ctx context.Context, id string, qty int) error {
+	res, err := s.pool.Exec(ctx, `UPDATE products SET stock = stock - $2 WHERE id = $1 AND stock >= $2`, id, qty)
+	if err != nil {
+		return fmt.Errorf("decrement stock: %w", err)
+	}
+	if res.RowsAffected() == 1 {
+		return nil
+	}
+	if _, gerr := s.Get(ctx, id); gerr != nil {
+		return gerr // ErrNotFound
+	}
+	return ErrInsufficientStock
+}
+
+func (s *PGStore) IncrementStock(ctx context.Context, id string, qty int) error {
+	res, err := s.pool.Exec(ctx, `UPDATE products SET stock = stock + $2 WHERE id = $1`, id, qty)
+	if err != nil {
+		return fmt.Errorf("increment stock: %w", err)
+	}
+	if res.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // SeedIfEmpty inserts the v0.1 seed catalog once, so a fresh DB matches memory dev.
 func (s *PGStore) SeedIfEmpty(ctx context.Context) error {
 	var count int

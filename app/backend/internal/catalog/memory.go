@@ -58,6 +58,33 @@ func (s *MemoryStore) Delete(_ context.Context, id string) error {
 	return nil
 }
 
+func (s *MemoryStore) DecrementStock(_ context.Context, id string, qty int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p, ok := s.m[id]
+	if !ok {
+		return ErrNotFound
+	}
+	if p.Stock < qty {
+		return ErrInsufficientStock
+	}
+	p.Stock -= qty
+	s.m[id] = p
+	return nil
+}
+
+func (s *MemoryStore) IncrementStock(_ context.Context, id string, qty int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p, ok := s.m[id]
+	if !ok {
+		return ErrNotFound
+	}
+	p.Stock += qty
+	s.m[id] = p
+	return nil
+}
+
 // SeedProducts is shared with PGStore.SeedIfEmpty so both backends start identical.
 func SeedProducts(now time.Time) []Product {
 	return []Product{

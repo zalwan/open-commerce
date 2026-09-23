@@ -88,7 +88,7 @@ func TestPostgresEndToEnd(t *testing.T) {
 		t.Fatalf("cart not persisted, subtotal %d", c2.Subtotal)
 	}
 
-	orders := order.NewService(order.NewPGStore(pool), carts2, payment.NewStub())
+	orders := order.NewService(order.NewPGStore(pool), carts2, cat, payment.NewStub())
 	o, err := orders.Checkout(ctx, sess, "pg@test.local", false)
 	if err != nil {
 		t.Fatalf("checkout: %v", err)
@@ -106,5 +106,30 @@ func TestPostgresEndToEnd(t *testing.T) {
 	list, err := orders.List(ctx)
 	if err != nil || len(list) != 1 {
 		t.Fatalf("expected 1 order, got %d (%v)", len(list), err)
+	}
+	got, err = cat.Get(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("re-get product: %v", err)
+	}
+	if got.Stock != 5 {
+		t.Fatalf("expected stock 5 after checkout, got %d", got.Stock)
+	}
+
+	// Oversell: stock 1, two sessions race — second checkout must fail.
+	limited, err := cat.Create(ctx, catalog.Product{Name: "Limited", PriceMinor: 1000000, Stock: 1})
+	if err != nil {
+		t.Fatalf("create limited: %v", err)
+	}
+	if _, err := carts.AddItem(ctx, "pg-a", limited.ID, 1); err != nil {
+		t.Fatalf("add a: %v", err)
+	}
+	if _, err := carts.AddItem(ctx, "pg-b", limited.ID, 1); err != nil {
+		t.Fatalf("add b: %v", err)
+	}
+	if _, err := orders.Checkout(ctx, "pg-a", "a@test.local", false); err != nil {
+		t.Fatalf("checkout a: %v", err)
+	}
+	if _, err := orders.Checkout(ctx, "pg-b", "b@test.local", false); err == nil {
+		t.Fatal("expected oversell checkout to fail")
 	}
 }

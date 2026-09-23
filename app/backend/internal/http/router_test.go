@@ -21,7 +21,7 @@ func testRouter() http.Handler {
 	cat := catalog.NewService(catalog.NewMemoryStore())
 	carts := cart.NewService(cart.NewMemoryStore(), cat)
 	pay := payment.NewStub()
-	return NewRouter(Deps{Catalog: cat, Cart: carts, Order: order.NewService(order.NewMemoryStore(), carts, pay), Auth: auth.NewService(), Pay: pay}, logger)
+	return NewRouter(Deps{Catalog: cat, Cart: carts, Order: order.NewService(order.NewMemoryStore(), carts, cat, pay), Auth: auth.NewService(), Pay: pay}, logger)
 }
 
 func TestHealthz(t *testing.T) {

@@ -6,8 +6,8 @@
 - **Source location:** `app/backend/internal/catalog/` (`service.go`, `memory.go`, `store_pg.go`)
 - **Dependencies:** `Store` interface (memory default; `PGStore` via pgxpool bila `DATABASE_URL` terisi).
 - **Consumers:** HTTP handlers `GET /api/v1/products`, `GET /api/v1/products/{id}`, admin product endpoints.
-- **Interfaces:** `Service.List(ctx,q)`, `Get(ctx,id)`, `Create/Update/Delete` (semua ber-`error`) — JSON di `internal/http/`.
-- **Data stores:** Memory map → tabel Postgres `products` (+ `SeedIfEmpty` untuk DB segar).
+- **Interfaces:** `Service.List(ctx,q)`, `Get(ctx,id)`, `Create/Update/Delete`, `DecrementStock/IncrementStock` (semua ber-`error`) — JSON di `internal/http/`.
+- **Data stores:** Memory map → tabel Postgres `products` (+ `SeedIfEmpty` untuk DB segar). Decrement atomik (`UPDATE ... WHERE stock >= qty`) agar checkout konkuren tidak oversell.
 - **Operational notes:** Read-heavy; validasi harga/stok di service, bukan handler.
 
 ---
@@ -26,7 +26,7 @@
 
 ## Order Service
 
-- **Responsibility:** Checkout: snapshot cart → hitung total → panggil payment stub → buat order dengan status (`pending|paid|payment_failed|shipped|done|cancelled`). Transisi status tervalidasi.
+- **Responsibility:** Checkout: snapshot cart → reservasi stok (decrement atomik) → panggil payment stub → buat order dengan status (`pending|paid|payment_failed|shipped|done|cancelled`). Gagal bayar → restock kompensasi + order `payment_failed`. Cancel dari `paid` → restock.
 - **Source location:** `app/backend/internal/order/` (`service.go`, `store_pg.go`)
 - **Dependencies:** Cart service, Payment stub, `Store`.
 - **Consumers:** `POST /api/v1/orders/checkout`, `GET /api/v1/orders/{id}`, admin order endpoints.

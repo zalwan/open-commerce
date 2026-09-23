@@ -43,7 +43,7 @@ Summarized here; detail in [components.md](./components.md).
 
 ## Data Flows
 
-1. Browse & beli: `GET /api/v1/products` → render katalog → `POST /api/v1/cart/items` (session) → `POST /api/v1/orders/checkout` → order service panggil payment stub → order `paid|pending` → frontend halaman sukses.
+1. Browse & beli: `GET /api/v1/products` → render katalog → `POST /api/v1/cart/items` (session) → `POST /api/v1/orders/checkout` → order service reservasi stok atomik → panggil payment stub → order `paid|payment_failed` (gagal bayar → restock) → frontend halaman sukses. Stok habis → 409 tanpa order.
 2. Admin kelola: login stub → token → `POST /api/v1/admin/products` → catalog service validasi → store simpan (Postgres upsert bila dikonfigurasi) → list ter-refresh. Order: `GET /api/v1/admin/orders` → ubah status (`paid → shipped → done`) via `POST /api/v1/admin/orders/{id}/status`.
 
 ## Boundaries

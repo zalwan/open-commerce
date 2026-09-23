@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/open-commerce/backend/internal/cart"
+	"github.com/open-commerce/backend/internal/catalog"
 	"github.com/open-commerce/backend/internal/payment"
 )
 
@@ -96,18 +97,20 @@ func (s *MemoryStore) List(_ context.Context) ([]Order, error) {
 	return out, nil
 }
 
-// Service coordinates cart snapshot + payment stub + order store.
+// Service coordinates cart snapshot + stock reservation + payment stub + order store.
 type Service struct {
 	store   Store
 	carts   *cart.Service
+	catalog *catalog.Service
 	payment payment.Provider
 }
 
-func NewService(store Store, carts *cart.Service, pay payment.Provider) *Service {
-	return &Service{store: store, carts: carts, payment: pay}
+func NewService(store Store, carts *cart.Service, catalogSvc *catalog.Service, pay payment.Provider) *Service {
+	return &Service{store: store, carts: carts, catalog: catalogSvc, payment: pay}
 }
 
-// Checkout snapshots the cart, charges via stub, records order, clears cart on success.
+// Checkout reserves stock first, then charges: success records a paid order,
+// payment failure compensates (restocks) and records payment_failed.
 func (s *Service) Checkout(ctx context.Context, sessionID, email string, failPayment bool) (Order, error) {
 	if email == "" {
 		return Order{}, ErrBadEmail
@@ -119,10 +122,20 @@ func (s *Service) Checkout(ctx context.Context, sessionID, email string, failPay
 	if len(c.Items) == 0 {
 		return Order{}, ErrEmptyCart
 	}
+	// Reserve stock before charging so concurrent checkouts cannot oversell.
+	reserved := make([]cart.Item, 0, len(c.Items))
+	for _, it := range c.Items {
+		if derr := s.catalog.DecrementStock(ctx, it.ProductID, it.Qty); derr != nil {
+			s.restock(ctx, reserved)
+			return Order{}, derr
+		}
+		reserved = append(reserved, it)
+	}
 	txID, payErr := s.payment.Charge(c.Subtotal, "IDR", failPayment)
 	status := StatusPaid
 	if payErr != nil {
 		status = StatusPaymentFailed
+		s.restock(ctx, reserved)
 	}
 	id, err := s.store.NextID(ctx)
 	if err != nil {
@@ -183,11 +196,23 @@ func (s *Service) SetStatus(ctx context.Context, id string, next Status) (Order,
 	if !okTransition {
 		return o, ErrBadStatus
 	}
+	// Cancelling a paid (unshipped) order releases the reservation.
+	if o.Status == StatusPaid && next == StatusCancelled {
+		s.restock(ctx, o.Items)
+	}
 	o.Status = next
 	if err := s.store.Save(ctx, o); err != nil {
 		return Order{}, err
 	}
 	return o, nil
+}
+
+// restock best-effort compensates reserved items; errors are swallowed
+// because the order outcome is already decided (logged by the caller path).
+func (s *Service) restock(ctx context.Context, items []cart.Item) {
+	for _, it := range items {
+		_ = s.catalog.IncrementStock(ctx, it.ProductID, it.Qty)
+	}
 }
 
 func itoa(n int64) string {
