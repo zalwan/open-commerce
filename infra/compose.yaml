@@ -1,0 +1,52 @@
+# Services for local development.
+# v0.1: api + web run from source; db (Postgres 16) is standby for v0.2.
+# Usage: docker compose -f infra/compose.yaml up db  (then run api/web locally)
+# Full images: docker compose -f infra/compose.yaml up --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: opencommerce
+      POSTGRES_PASSWORD: opencommerce
+      POSTGRES_DB: opencommerce
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opencommerce"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ../app/backend
+      dockerfile: ../../infra/Dockerfile.api
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://opencommerce:opencommerce@db:5432/opencommerce?sslmode=disable"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz | grep ok"]
+      interval: 10s
+      retries: 5
+
+  web:
+    build:
+      context: ../app/frontend
+      dockerfile: ../../infra/Dockerfile.web
+      args:
+        PUBLIC_API_BASE_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

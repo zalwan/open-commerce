@@ -27,6 +27,14 @@ temp/
 dist/
 build/
 out/
+.svelte-kit/
+.svelte-kit-tsconfig.json
+
+# Stack: Go + SvelteKit (Open Commerce)
+app/frontend/node_modules/
+app/frontend/.svelte-kit/
+app/backend/api
+pgdata/
 
 # Secrets (never commit)
 *.pem

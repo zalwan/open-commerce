@@ -1,49 +1,48 @@
-# Constraints
-
-> Template. Replace all placeholders when adopting this standard.
-> Purpose: binding limits on what may and may not change.
-> This document is particularly important for AI agents. Constraints override convenience.
+# Constraints — Open Commerce
 
 ## Technical Constraints
 
-- [Constraint 1 — e.g. supported runtime versions, compatibility requirements.]
-- [Constraint 2.]
+- Go >= 1.25, Node >= 22 LTS. Versi minimum mengikat; upgrade butuh uji `go test` + `npm run build`.
+- API versioning: publik hanya `/api/v1/*`. Breaking change butuh versi baru + ADR, tidak boleh ubah v1 in-place.
+- Backend zero third-party deps di v0.1 (stdlib only). Tambah dependency butuh justifikasi + update `technology.md` + `project.yaml`.
+- Frontend: TypeScript strict, tidak ada `any` tanpa alasan; SvelteKit file-routing tetap dipakai (jangan custom router).
+- Data: harga dalam minor units (`priceMinor` int64, mis. rupiah sen) — tidak ada float untuk uang.
 
 ## Business Constraints
 
-- [Constraint 1 — e.g. licensing, scope limits, timeline obligations.]
-- [Constraint 2.]
+- Lisensi MIT — semua kontribusi harus kompatibel MIT; tidak boleh dependensi berlisensi copyleft kuat (GPL/AGPL) tanpa ADR + persetujuan maintainer.
+- Single-vendor only di v0.1. Fitur multi-seller/komisi dilarang masuk tanpa ADR yang mencabut non-goal.
+- Payment stub bukan alat transaksi real — dilarang memproses uang asli via stub.
 
 ## Operational Constraints
 
-- [Constraint 1 — e.g. maintenance windows, environment limits, data retention.]
-- [Constraint 2.]
+- `GET /healthz` wajib ada dan tanpa auth; dipakai probe Docker/K8s.
+- Konfigurasi via env + `config/app.yaml`; dilarang hardcode port/URL/credential di kode.
+- Upload file produk out-of-scope v0.1 — hanya URL gambar eksternal.
 
 ## Security Constraints
 
-- [Constraint 1 — e.g. authentication requirements, secret handling, data classification.]
-- [Constraint 2.]
+- Tidak ada secret/credential real di repo, issue, atau log. Token stub hanya untuk dev (`admin123` didokumentasikan sebagai kredensial dummy).
+- Auth stub bukan keamanan prod — dilarang mengklaimnya aman untuk prod; endpoint admin wajib 401/403 bila token hilang/salah.
+- CORS dev boleh `*`; prod wajib allowlist/same-origin. Validasi input di handler (bad JSON → 400).
+- Secret handling: baca dari env; contoh nilai hanya dummy di `config/` dan `setup.md`.
 
 ## Compatibility Constraints
 
-- [Constraint 1 — e.g. supported platforms, protocols, data formats.]
-- [Constraint 2.]
+- REST JSON UTF-8; currency default `IDR`; format error `{"error":"..."}` konsisten.
+- Frontend harus jalan dengan `npm run dev` tanpa DB; backend harus jalan dengan `go run ./...` tanpa DB (memory store).
+- Browser support: evergreen 2 versi terakhir (SvelteKit default).
 
 ## Performance Constraints
 
-- [Constraint 1 — e.g. latency, throughput, resource budgets — or "none defined".]
-- [Constraint 2.]
+- p95 checkout lokal < 500ms (stub, tanpa DB) — diukur manual di v0.1, benchmark formal di v0.3.
+- Halaman katalog SSR < 2s di dev lokal (tanpa optimasi prod).
 
 ## Forbidden Changes
 
-- [Explicitly forbidden change 1 — e.g. "Do not modify ... without ...".]
-- [Explicitly forbidden change 2.]
-
-If no forbidden changes exist, write `None defined.` Do not leave this section empty.
-
----
-
-**Rules:**
-
-- Every entry must be actionable: an agent reading it should know what to avoid or verify.
-- Constraints are not aspirations. If a constraint no longer applies, remove it via an explicit change with a decision record when architectural.
+- Dilarang handler Go mengakses store/DB langsung — wajib via service.
+- Dilarang frontend mengakses DB langsung — wajib via REST API.
+- Dilarang menambah integrasi payment/auth real, vector DB, atau platform deploy baru tanpa ADR.
+- Dilarang commit secret, `.env` berisi credential real, atau database dump.
+- Dilarang mengubah `docs/decisions/*` yang sudah ada selain typo/status-line; perubahan butuh ADR baru.
+- Dilarang memecah backend menjadi microservices tanpa ADR (tetap modular monolith di v0.1).

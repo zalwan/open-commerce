@@ -1,32 +1,29 @@
 # AI-Native Repository Standard v1.0 — Project Metadata
-# This file is machine-readable project metadata. It is NOT a documentation substitute.
-# Fill the empty values when adopting this template. Keep values technology-agnostic
-# in structure (free-form strings/lists); do not change the schema keys.
 
 standard:
   name: "AI-Native Repository Standard"
   version: "1.0"
 
 project:
-  name: ""
-  description: ""
-  status: ""      # e.g. draft | active | maintenance | archived
-  maturity: ""    # e.g. prototype | beta | production
-  owners: []      # e.g. ["team-or-contact"]
+  name: "Open Commerce"
+  description: "Open source single-vendor e-commerce: katalog, cart, checkout (stub), admin — backend Go + frontend SvelteKit."
+  status: "active"
+  maturity: "prototype"
+  owners: ["community-maintainer"]
 
 technology:
-  languages: []
-  frameworks: []
-  runtimes: []
-  databases: []
-  infrastructure: []
-  cicd: []
-  observability: []
+  languages: ["Go 1.25", "TypeScript 5.x (Svelte 4)"]
+  frameworks: ["Go stdlib net/http (v0.1 zero-deps)", "SvelteKit 2", "Vite 5"]
+  runtimes: ["Go 1.25", "Node.js 22 LTS"]
+  databases: ["Postgres 16 (intent, v0.2+)", "in-memory maps (v0.1 skeleton)"]
+  infrastructure: ["Docker Compose (api, web, db)"]
+  cicd: ["GitHub Actions (go test, npm build)"]
+  observability: ["stdout slog logs", "/healthz liveness"]
   external_services: []
 
 architecture:
-  style: ""       # e.g. modular-monolith | layered | event-driven (project declares its own)
-  patterns: []
+  style: "modular-monolith (backend) + client-server (frontend to API)"
+  patterns: ["handler-service-store", "interface-stub (payment/auth)", "file-based-routing (SvelteKit)", "versioned-REST /api/v1"]
 
 documentation:
   system: "docs/system"

@@ -1,0 +1,13 @@
+# Backend image: Go stdlib API, no CGO.
+FROM golang:1.25-alpine AS build
+WORKDIR /src
+COPY app/backend/go.mod ./
+RUN go mod download 2>/dev/null || true
+COPY app/backend/ ./
+RUN CGO_ENABLED=0 go build -o /api ./cmd/api
+
+FROM gcr.io/distroless/static-debian12 AS run
+COPY --from=build /api /api
+ENV PORT=8080
+EXPOSE 8080
+ENTRYPOINT ["/api"]

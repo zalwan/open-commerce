@@ -1,0 +1,17 @@
+# Open Commerce — application config (checked-in defaults, env overrides win)
+# Never put real secrets here. Production values come from environment.
+
+server:
+  port: 8080            # override: PORT
+
+store:
+  # v0.1 uses in-memory. v0.2+ set DATABASE_URL, e.g. postgres://user:pass@localhost:5432/opencommerce?sslmode=disable
+  database_url: ""      # override: DATABASE_URL
+
+frontend:
+  # SvelteKit public env; dev default points at local API.
+  public_api_base_url: "http://localhost:8080"  # override: PUBLIC_API_BASE_URL
+
+auth_stub:
+  admin_email: "admin@shop.test"       # dummy dev-only
+  customer_email: "customer@shop.test" # dummy dev-only

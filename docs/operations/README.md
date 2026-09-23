@@ -1,70 +1,23 @@
-# Operations
+# Operations — Open Commerce (v0.1 fondasi)
 
-> Template directory. Replace with project-specific guides when adopting this standard.
-> Purpose: how to deploy, observe, and recover this system.
-> These templates are intentionally generic. Do not assume a specific hosting, container, or cloud platform.
+## Deployment
 
-## Expected Guides
+- Lokal: backend `go run ./cmd/api` (di `app/backend`, `:8080`) + frontend `npm run dev` (di `app/frontend`, `:5173`).
+- Compose: `docker compose -f infra/compose.yaml up --build` (api :8080, web :3000, db Postgres standby).
+- Konfigurasi: `PORT`, `DATABASE_URL` (opsional v0.1), `PUBLIC_API_BASE_URL`. Sumber: [`config/app.yaml`](../../config/app.yaml).
+- Rollback: v0.1 tanpa migrasi DB — rollback = checkout commit sebelumnya + rebuild. Mulai v0.2 (Postgres) butuh `migrate down` terdokumentasi.
 
-| Guide | Suggested File | Contents |
-|-------|---------------|----------|
-| Deployment | `deployment.md` | Environments, release steps, configuration, rollback |
-| Monitoring | `monitoring.md` | Health signals, logs, metrics, alerts, dashboards |
-| Troubleshooting | `troubleshooting.md` | Symptom → diagnosis → remediation tables, escalation |
+## Monitoring
 
-Create only the guides the project needs. A small project may start with a single `README.md` section; a larger one may split into the files above.
+- Health: `GET /healthz` → `{"ok":true}` (tanpa auth). Compose `api.healthcheck` + probe K8s memakai path ini.
+- Logs: backend JSON via `log/slog` (method, path, latency_ms); frontend console. Cari `level=ERROR` untuk 5xx.
+- Metrik/Trace: none di v0.1 (diterima untuk prototype).
 
-## Deployment (`deployment.md` sketch)
-
-```markdown
-# Deployment
-
-## Environments
-
-- [Environment 1: purpose, access, configuration source.]
-
-## Release Process
-
-1. [Step 1.]
-2. [Step 2.]
-
-## Configuration
-
-- [Required settings and where they are provided.]
-
-## Rollback
-
-- [How to revert a release.]
-```
-
-## Monitoring (`monitoring.md` sketch)
-
-```markdown
-# Monitoring
-
-## Health Signals
-
-- [Signal 1: where to observe, what healthy looks like.]
-
-## Alerts
-
-| Alert | Meaning | Response |
-|-------|---------|----------|
-| [Name] | [Cause] | [Action + link to troubleshooting] |
-```
-
-## Troubleshooting (`troubleshooting.md` sketch)
-
-```markdown
-# Troubleshooting
+## Troubleshooting
 
 | Symptom | Likely Cause | Diagnosis | Remediation |
 |---------|--------------|-----------|-------------|
-| [Observed behavior] | [Hypothesis] | [Where to confirm] | [Fix + escalation] |
-```
-
-## Rules
-
-- Describe only what actually exists. Do not document aspirational infrastructure.
-- If infrastructure contains resources not documented anywhere, that is context drift — document them or report the discrepancy.
-- Operational changes that affect behavior must also update `docs/system/` where applicable.
+| Katalog kosong / fetch gagal di :5173 | API :8080 mati atau `PUBLIC_API_BASE_URL` salah | `curl localhost:8080/api/v1/products` | Nyalakan API; samakan env |
+| Checkout 402 `payment failed` | `fail=true` terkirim atau amount invalid | Cek body request; log API | Retry tanpa `fail`; pastikan cart tidak kosong |
+| Admin 401/403 | Token hilang / bukan admin | `POST /api/v1/auth/login` dengan dummy admin | Login ulang, kirim `Authorization: Bearer <token>` |
+| Port bentrok | Proses lama masih jalan | `lsof -i :8080` | Kill atau `PORT=8081` + sesuaikan frontend env |
