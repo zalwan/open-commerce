@@ -11,19 +11,19 @@
 		try {
 			cart = await api.cart(getSessionId());
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Gagal memuat';
+			error = e instanceof Error ? e.message : 'Failed to load';
 		}
 	});
 </script>
 
-<h1>Keranjang</h1>
+<h1>Cart</h1>
 {#if error}<p class="alert-error">{error}</p>{/if}
 {#if !cart}
-	<p class="muted">Memuat…</p>
+	<p class="muted">Loading…</p>
 {:else if cart.items.length === 0}
 	<div class="panel">
-		<p>Keranjang masih kosong.</p>
-		<a class="btn btn-primary" href="/">Mulai belanja</a>
+		<p>Your cart is empty.</p>
+		<a class="btn btn-primary" href="/">Start shopping</a>
 	</div>
 {:else}
 	<ul class="rows">
@@ -36,7 +36,7 @@
 	</ul>
 	<p class="total">Subtotal: {formatIDR(cart.subtotalMinor)}</p>
 	<div class="btn-row" style="justify-content:flex-end">
-		<a class="btn btn-ghost" href="/">Lanjut belanja</a>
-		<a class="btn btn-primary" href="/checkout">Lanjut checkout →</a>
+		<a class="btn btn-ghost" href="/">Continue shopping</a>
+		<a class="btn btn-primary" href="/checkout">Proceed to checkout →</a>
 	</div>
 {/if}

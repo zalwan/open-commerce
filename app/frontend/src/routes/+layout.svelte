@@ -6,8 +6,8 @@
 	<div class="topbar-inner">
 		<a class="brand" href="/">Open<span>Commerce</span></a>
 		<nav class="nav">
-			<a href="/">Katalog</a>
-			<a href="/cart">Keranjang</a>
+			<a href="/">Catalog</a>
+			<a href="/cart">Cart</a>
 			<a href="/admin">Admin</a>
 		</nav>
 	</div>
@@ -15,4 +15,4 @@
 <main class="container">
 	<slot />
 </main>
-<footer class="footer">Open Commerce · open source single-vendor · pembayaran stub (tanpa uang asli)</footer>
+<footer class="footer">Open Commerce · open source single-vendor · stub payments (no real money)</footer>

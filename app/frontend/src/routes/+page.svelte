@@ -16,27 +16,27 @@
 	}
 
 	function stockLabel(p: Product): string {
-		if (p.stock <= 0) return 'Stok habis';
-		if (p.stock <= 5) return `Sisa ${p.stock}`;
-		return `Stok ${p.stock}`;
+		if (p.stock <= 0) return 'Out of stock';
+		if (p.stock <= 5) return `Only ${p.stock} left`;
+		return `In stock (${p.stock})`;
 	}
 </script>
 
 <div class="hero">
-	<h1>Belanja langsung dari toko kami</h1>
-	<p>Katalog, keranjang, dan checkout dalam satu aplikasi open source.</p>
+	<h1>Shop straight from our store</h1>
+	<p>Catalog, cart, and checkout in one open source app.</p>
 </div>
 
 <form class="searchbar" on:submit|preventDefault={search}>
-	<input class="input" bind:value={q} placeholder="Cari produk…" />
-	<button class="btn btn-primary" type="submit">Cari</button>
+	<input class="input" bind:value={q} placeholder="Search products…" />
+	<button class="btn btn-primary" type="submit">Search</button>
 </form>
 
 {#await promise}
-	<p class="muted">Memuat… (pastikan backend Go jalan di :8080)</p>
+	<p class="muted">Loading… (make sure the Go backend runs on :8080)</p>
 {:then products}
 	{#if products.length === 0}
-		<p>Belum ada produk yang cocok.</p>
+		<p>No matching products yet.</p>
 	{:else}
 		<ul class="grid">
 			{#each products as p}
@@ -58,5 +58,5 @@
 		</ul>
 	{/if}
 {:catch e}
-	<p class="alert-error">Gagal memuat: {e.message}</p>
+	<p class="alert-error">Failed to load: {e.message}</p>
 {/await}

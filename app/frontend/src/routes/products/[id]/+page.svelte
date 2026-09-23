@@ -11,16 +11,16 @@
 	async function add() {
 		try {
 			await api.addToCart(getSessionId(), id, qty);
-			msg = 'Ditambahkan ke keranjang.';
+			msg = 'Added to cart.';
 			isErr = false;
 		} catch (e) {
-			msg = e instanceof Error ? e.message : 'Gagal';
+			msg = e instanceof Error ? e.message : 'Failed';
 			isErr = true;
 		}
 	}
 </script>
 
-<a class="back" href="/">← Kembali ke katalog</a>
+<a class="back" href="/">← Back to catalog</a>
 {#await api.product(id) then p}
 	<div class="detail">
 		<div class="thumb">
@@ -32,15 +32,15 @@
 		</div>
 		<div>
 			<h1 style="margin-top:0">{p.name}</h1>
-			<p class="muted">{p.description ?? 'Tanpa deskripsi.'}</p>
+			<p class="muted">{p.description ?? 'No description.'}</p>
 			<p class="price" style="font-size:1.4rem">{formatIDR(p.priceMinor)}</p>
 			<p>
 				{#if p.stock <= 0}
-					<span class="badge badge-err">Stok habis</span>
+					<span class="badge badge-err">Out of stock</span>
 				{:else if p.stock <= 5}
-					<span class="badge badge-warn">Sisa {p.stock}</span>
+					<span class="badge badge-warn">Only {p.stock} left</span>
 				{:else}
-					<span class="badge badge-ok">Stok {p.stock}</span>
+					<span class="badge badge-ok">In stock ({p.stock})</span>
 				{/if}
 			</p>
 			<div class="qty">
@@ -48,12 +48,12 @@
 				<input id="qty" class="input" type="number" min="1" max={Math.max(p.stock, 1)} bind:value={qty} disabled={p.stock <= 0} />
 			</div>
 			<div class="btn-row">
-				<button class="btn btn-primary" on:click={add} disabled={p.stock <= 0}>Tambah ke keranjang</button>
-				<a class="btn btn-ghost" href="/cart">Lihat keranjang</a>
+				<button class="btn btn-primary" on:click={add} disabled={p.stock <= 0}>Add to cart</button>
+				<a class="btn btn-ghost" href="/cart">View cart</a>
 			</div>
 			{#if msg}<p class={isErr ? 'alert-error' : 'alert-ok'}>{msg}</p>{/if}
 		</div>
 	</div>
 {:catch e}
-	<p class="alert-error">Gagal: {e.message}</p>
+	<p class="alert-error">Failed: {e.message}</p>
 {/await}

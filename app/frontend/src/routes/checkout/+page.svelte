@@ -25,9 +25,9 @@
 			const order = await api.checkout(getSessionId(), email);
 			await goto(`/orders/${order.id}`);
 		} catch (e) {
-			const msg = e instanceof Error ? e.message : 'Checkout gagal';
+			const msg = e instanceof Error ? e.message : 'Checkout failed';
 			error = msg.includes('409')
-				? 'Stok tidak cukup untuk sebagian produk — kurangi qty atau kembali lagi nanti.'
+				? 'Not enough stock for some items — reduce the qty or come back later.'
 				: msg;
 		} finally {
 			loading = false;
@@ -37,11 +37,11 @@
 
 <h1>Checkout</h1>
 <div class="panel">
-	<h2>Ringkasan</h2>
+	<h2>Summary</h2>
 	{#if !cart}
-		<p class="muted">Memuat keranjang…</p>
+		<p class="muted">Loading cart…</p>
 	{:else if cart.items.length === 0}
-		<p>Keranjang kosong. <a href="/">Belanja dulu</a>.</p>
+		<p>Cart is empty. <a href="/">Shop first</a>.</p>
 	{:else}
 		<ul class="rows">
 			{#each cart.items as it}
@@ -56,11 +56,11 @@
 </div>
 
 <div class="panel">
-	<h2>Pembayaran</h2>
-	<p class="muted" style="margin-top:0">Via <em>stub mock</em> — tanpa uang asli.</p>
+	<h2>Payment</h2>
+	<p class="muted" style="margin-top:0">Via <em>mock stub</em> — no real money.</p>
 	<form on:submit|preventDefault={submit}>
-		<label class="field">Email<input class="input" type="email" required bind:value={email} placeholder="kamu@mail.test" /></label>
-		<button class="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Memproses…' : 'Bayar (mock)'}</button>
+		<label class="field">Email<input class="input" type="email" required bind:value={email} placeholder="you@mail.test" /></label>
+		<button class="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Processing…' : 'Pay (mock)'}</button>
 	</form>
 	{#if error}<p class="alert-error">{error}</p>{/if}
 </div>

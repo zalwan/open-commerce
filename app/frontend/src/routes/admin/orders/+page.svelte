@@ -19,12 +19,12 @@
 
 	async function reload() {
 		const t = getToken();
-		if (!t) throw new Error('Belum login — masuk dulu di /admin');
+		if (!t) throw new Error('Not logged in — sign in at /admin first');
 		orders = await api.adminOrders(t);
 	}
 
 	onMount(() => {
-		reload().catch((e) => (error = e instanceof Error ? e.message : 'Gagal'));
+		reload().catch((e) => (error = e instanceof Error ? e.message : 'Failed'));
 	});
 
 	async function advance(o: Order) {
@@ -32,29 +32,29 @@
 		if (!next) return;
 		try {
 			const t = getToken();
-			if (!t) throw new Error('Belum login');
+			if (!t) throw new Error('Not logged in');
 			await api.setOrderStatus(t, o.id, next);
 			msg = `Order ${o.id} → ${next}.`;
 			await reload();
 		} catch (e) {
-			msg = e instanceof Error ? e.message : 'Gagal ubah status';
+			msg = e instanceof Error ? e.message : 'Failed to change status';
 		}
 	}
 </script>
 
 <a class="back" href="/admin">← Admin</a>
-<h1>Kelola Order</h1>
+<h1>Manage Orders</h1>
 {#if error}<p class="alert-error">{error}</p>{/if}
 {#if msg}<p class="alert-ok">{msg}</p>{/if}
 {#if orders.length === 0 && !error}
-	<p class="muted">Belum ada order.</p>
+	<p class="muted">No orders yet.</p>
 {:else}
 	<ul class="rows">
 		{#each orders as o}
 			<li class="row">
 				<div class="grow">
 					<strong>{o.id}</strong> · {o.email}<br />
-					<span class="muted">{o.items.length} item · {formatIDR(o.totalMinor)}</span>
+					<span class="muted">{o.items.length} items · {formatIDR(o.totalMinor)}</span>
 					<span class={statusClass(o.status)}>{o.status}</span>
 				</div>
 				{#if NEXT[o.status]}
