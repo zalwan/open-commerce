@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars for local iteration. NEVER commit terraform.tfvars.
+# Pass values via -var flags in CI instead.
+
+project_id   = ""
+environment  = "staging"
+region       = "asia-southeast2"
+api_image    = ""
+web_image    = ""
+db_tier      = "db-f1-micro"

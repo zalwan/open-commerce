@@ -44,3 +44,16 @@ data/
 *.pem
 *.key
 secrets/
+
+# Terraform (never commit state or local var files)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

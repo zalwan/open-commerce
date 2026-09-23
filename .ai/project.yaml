@@ -16,7 +16,7 @@ technology:
   frameworks: ["Go stdlib net/http", "pgx v5 (pgpool)", "SvelteKit 2", "Vite 5"]
   runtimes: ["Go 1.25", "Node.js 22 LTS"]
   databases: ["Postgres 16 (active when DATABASE_URL set)", "local disk DATA_DIR (product images)", "in-memory maps (fallback when DATABASE_URL empty)"]
-  infrastructure: ["Docker Compose (api, web, db)"]
+  infrastructure: ["Docker Compose (api, web, db)", "Terraform/OpenTofu scaffold for GCP (planned, not applied)"]
   cicd: ["GitHub Actions (go test + integration, npm build)"]
   observability: ["stdout slog logs", "/healthz liveness", "/readyz readiness"]
   external_services: []

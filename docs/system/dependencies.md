@@ -32,3 +32,4 @@ browser --> frontend (SvelteKit) --> http-api (Go) --> catalog/cart/order servic
 | Go API | `PORT` env (default 8080), `DATABASE_URL` (kosong → memory; terisi → Postgres + migrasi + seed) | `config/app.yaml` + env override; compose di `infra/` |
 | SvelteKit web | `PUBLIC_API_BASE_URL` (default `http://localhost:8080`) | Build-time public env; prod via proxy same-origin |
 | Local dev | Docker Compose `db` (Postgres 16) — aktif dipakai sejak v0.2 | `docker compose -f infra/compose.yaml up db`, lalu `DATABASE_URL=... go run ./cmd/api` |
+| Prod (planned) | GCP via Terraform: VPC, Cloud SQL 16, Artifact Registry, Cloud Run ×2 | Scaffold `infra/terraform/` belum di-apply; secrets via Secret Manager (ADR-0004) |

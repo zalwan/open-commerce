@@ -38,8 +38,10 @@
 
 | Area | Choice | Notes |
 |------|--------|-------|
-| Hosting | Docker Compose lokal (api + web + db); image generik untuk prod | Lihat `infra/` |
-| Networking | Browser → SvelteKit (`:5173` dev / `:3000` preview) → Go API (`:8080`) → Postgres (`:5432`) | REST JSON `/api/v1/*`, CORS dev open, prod same-origin via proxy |
+| Hosting (dev) | Docker Compose lokal (api + web + db); image generik untuk prod | Lihat `infra/` |
+| Hosting (prod, planned) | GCP: Cloud Run (api, web) + Cloud SQL Postgres 16 + Artifact Registry | Terraform scaffold `infra/terraform/`, belum di-apply (ADR-0004) |
+| IaC | Terraform/OpenTofu HCL (`infra/terraform/`) | `tofu fmt + init + validate` hijau; state GCS per-env saat apply |
+| Networking | Browser → SvelteKit (`:5173` dev / `:3000` preview) → Go API (`:8080`) → Postgres (`:5432`) | REST JSON `/api/v1/*`, CORS dev open, prod same-origin via `PUBLIC_API_BASE_URL` |
 | Storage | Postgres volume `pgdata`; upload produk out-of-scope v0.1 (URL eksternal saja) | — |
 
 ## CI/CD
