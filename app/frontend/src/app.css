@@ -100,12 +100,29 @@ a {
 /* ---- hero ---- */
 
 .hero {
+	position: relative;
+	overflow: hidden;
 	background: linear-gradient(135deg, #064e3b, #059669);
 	color: #fff;
 	border-radius: var(--radius);
 	padding: 2rem 1.75rem;
 	margin-bottom: 1.5rem;
 	box-shadow: var(--shadow);
+}
+
+/* WebGL canvas fills the hero behind the copy; gradient overlay keeps text readable. */
+.hero-canvas {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+}
+
+.hero-copy {
+	position: relative;
+	z-index: 1;
+	text-shadow: 0 1px 8px rgb(6 78 59 / 0.55);
 }
 
 .hero h1 {

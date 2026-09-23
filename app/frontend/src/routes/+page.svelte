@@ -1,9 +1,39 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
 	import { api, formatIDR } from '$lib/api';
 	import type { Product } from '$lib/api';
+	import type { HeroScene } from '$lib/hero-scene';
 
 	let q = '';
 	let promise = api.products();
+	let canvas: HTMLCanvasElement | null = null;
+	let scene: HeroScene | null = null;
+	let webgl = true;
+
+	// Three.js hero is client-only: lazy-load behind a browser guard so
+	// SSR/prerender never touches WebGL. Any failure falls back to CSS.
+	onMount(() => {
+		if (!browser || !canvas) return;
+		let cancelled = false;
+		import('$lib/hero-scene')
+			.then((mod) => {
+				if (cancelled) return;
+				try {
+					scene = mod.createHeroScene(canvas as HTMLCanvasElement);
+				} catch {
+					webgl = false;
+				}
+			})
+			.catch(() => {
+				webgl = false;
+			});
+		return () => {
+			cancelled = true;
+			scene?.destroy();
+			scene = null;
+		};
+	});
 
 	function search() {
 		promise = api.products(q);
@@ -23,8 +53,13 @@
 </script>
 
 <div class="hero">
-	<h1>Shop straight from our store</h1>
-	<p>Catalog, cart, and checkout in one open source app.</p>
+	{#if webgl}
+		<canvas class="hero-canvas" bind:this={canvas} aria-hidden="true"></canvas>
+	{/if}
+	<div class="hero-copy">
+		<h1>Shop straight from our store</h1>
+		<p>Catalog, cart, and checkout in one open source app.</p>
+	</div>
 </div>
 
 <form class="searchbar" on:submit|preventDefault={search}>

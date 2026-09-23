@@ -17,7 +17,7 @@ An open source single-vendor e-commerce app (one seller): product catalog, cart,
 | Layer | Choice |
 |-------|--------|
 | Backend | Go 1.25, stdlib `net/http`, `pgx/v5` (only external dep) |
-| Frontend | SvelteKit 2, Svelte 4, strict TypeScript, Vite 5 |
+| Frontend | SvelteKit 2, Svelte 4, strict TypeScript, Vite 5, Three.js (lazy hero only) |
 | Database | Postgres 16 (active when `DATABASE_URL` is set), in-memory fallback |
 | Local infra | Docker Compose (`api`, `web`, `db`) |
 | CI | GitHub Actions: `go vet` + unit + integration + `npm run check` + build |
