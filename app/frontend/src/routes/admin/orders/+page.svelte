@@ -10,6 +10,13 @@
 
 	const NEXT: Record<string, string> = { paid: 'shipped', shipped: 'done', payment_failed: 'cancelled' };
 
+	function statusClass(s: string): string {
+		if (s === 'paid' || s === 'done') return 'badge badge-ok';
+		if (s === 'shipped') return 'badge badge-info';
+		if (s === 'payment_failed') return 'badge badge-err';
+		return 'badge';
+	}
+
 	async function reload() {
 		const t = getToken();
 		if (!t) throw new Error('Belum login — masuk dulu di /admin');
@@ -35,18 +42,23 @@
 	}
 </script>
 
+<a class="back" href="/admin">← Admin</a>
 <h1>Kelola Order</h1>
-{#if error}<p style="color:red">{error}</p>{/if}
-{#if msg}<p>{msg}</p>{/if}
-{#if orders.length === 0}
-	<p>Belum ada order.</p>
+{#if error}<p class="alert-error">{error}</p>{/if}
+{#if msg}<p class="alert-ok">{msg}</p>{/if}
+{#if orders.length === 0 && !error}
+	<p class="muted">Belum ada order.</p>
 {:else}
-	<ul style="list-style:none;padding:0;display:grid;gap:0.75rem">
+	<ul class="rows">
 		{#each orders as o}
-			<li style="border:1px solid #ddd;padding:0.75rem">
-				<strong>{o.id}</strong> — {o.email} — {formatIDR(o.totalMinor)} — status <strong>{o.status}</strong>
+			<li class="row">
+				<div class="grow">
+					<strong>{o.id}</strong> · {o.email}<br />
+					<span class="muted">{o.items.length} item · {formatIDR(o.totalMinor)}</span>
+					<span class={statusClass(o.status)}>{o.status}</span>
+				</div>
 				{#if NEXT[o.status]}
-					<button on:click={() => advance(o)}>→ {NEXT[o.status]}</button>
+					<button class="btn btn-primary" on:click={() => advance(o)}>→ {NEXT[o.status]}</button>
 				{/if}
 			</li>
 		{/each}

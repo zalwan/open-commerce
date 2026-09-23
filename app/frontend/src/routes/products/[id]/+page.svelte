@@ -6,25 +6,54 @@
 	const id: string = $page.params.id ?? '';
 	let qty = 1;
 	let msg = '';
+	let isErr = false;
 
 	async function add() {
 		try {
 			await api.addToCart(getSessionId(), id, qty);
 			msg = 'Ditambahkan ke keranjang.';
+			isErr = false;
 		} catch (e) {
 			msg = e instanceof Error ? e.message : 'Gagal';
+			isErr = true;
 		}
 	}
 </script>
 
-<a href="/">← Kembali</a>
+<a class="back" href="/">← Kembali ke katalog</a>
 {#await api.product(id) then p}
-	<h1>{p.name}</h1>
-	<p>{p.description ?? '-'}</p>
-	<p><strong>{formatIDR(p.priceMinor)}</strong> · stok {p.stock}</p>
-	<label>Qty <input type="number" min="1" max={p.stock} bind:value={qty} /></label>
-	<button on:click={add}>Tambah ke keranjang</button>
-	{#if msg}<p>{msg}</p>{/if}
+	<div class="detail">
+		<div class="thumb">
+			{#if p.imageUrl}
+				<img src={p.imageUrl} alt={p.name} />
+			{:else}
+				{p.name.slice(0, 1)}
+			{/if}
+		</div>
+		<div>
+			<h1 style="margin-top:0">{p.name}</h1>
+			<p class="muted">{p.description ?? 'Tanpa deskripsi.'}</p>
+			<p class="price" style="font-size:1.4rem">{formatIDR(p.priceMinor)}</p>
+			<p>
+				{#if p.stock <= 0}
+					<span class="badge badge-err">Stok habis</span>
+				{:else if p.stock <= 5}
+					<span class="badge badge-warn">Sisa {p.stock}</span>
+				{:else}
+					<span class="badge badge-ok">Stok {p.stock}</span>
+				{/if}
+			</p>
+			<div class="qty">
+				<label for="qty">Qty</label>
+				<input id="qty" class="input" type="number" min="1" max={Math.max(p.stock, 1)} bind:value={qty} disabled={p.stock <= 0} />
+			</div>
+			<div class="btn-row">
+				<button class="btn btn-primary" on:click={add} disabled={p.stock <= 0}>Tambah ke keranjang</button>
+				<a class="btn btn-ghost" href="/cart">Lihat keranjang</a>
+			</div>
+			{#if msg}<p class={isErr ? 'alert-error' : 'alert-ok'}>{msg}</p>{/if}
+		</div>
+	</div>
 {:catch e}
-	<p style="color:red">Gagal: {e.message}</p>
+	<p class="alert-error">Gagal: {e.message}</p>
 {/await}

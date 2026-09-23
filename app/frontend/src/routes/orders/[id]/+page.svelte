@@ -3,18 +3,31 @@
 	import { api, formatIDR } from '$lib/api';
 
 	const id: string = $page.params.id ?? '';
+
+	function statusClass(s: string): string {
+		if (s === 'paid' || s === 'done') return 'badge badge-ok';
+		if (s === 'pending' || s === 'shipped') return 'badge badge-info';
+		if (s === 'payment_failed') return 'badge badge-err';
+		return 'badge';
+	}
 </script>
 
-<h1>Order sukses 🎉</h1>
-{#await api.order(id) then o}
-	<p>Order <strong>{o.id}</strong> — status <strong>{o.status}</strong></p>
-	<ul>
-		{#each o.items as it}
-			<li>{it.name} × {it.qty}</li>
-		{/each}
-	</ul>
-	<p>Total: <strong>{formatIDR(o.totalMinor)}</strong></p>
-	<a href="/">Belanja lagi</a>
-{:catch e}
-	<p style="color:red">Gagal memuat order: {e.message}</p>
-{/await}
+<div class="panel success-hero">
+	<div class="check">🎉</div>
+	<h1>Terima kasih! Pesanan diterima.</h1>
+	{#await api.order(id) then o}
+		<p>Order <strong>{o.id}</strong> · <span class={statusClass(o.status)}>{o.status}</span></p>
+		<ul class="rows" style="text-align:left">
+			{#each o.items as it}
+				<li class="row">
+					<div class="grow">{it.name} <span class="muted">× {it.qty}</span></div>
+					<div>{formatIDR(it.priceMinor * it.qty)}</div>
+				</li>
+			{/each}
+		</ul>
+		<p class="total">Total: {formatIDR(o.totalMinor)}</p>
+		<a class="btn btn-primary" href="/">Belanja lagi</a>
+	{:catch e}
+		<p class="alert-error">Gagal memuat order: {e.message}</p>
+	{/await}
+</div>

@@ -17,17 +17,26 @@
 </script>
 
 <h1>Keranjang</h1>
-{#if error}<p style="color:red">{error}</p>{/if}
+{#if error}<p class="alert-error">{error}</p>{/if}
 {#if !cart}
-	<p>Memuat…</p>
+	<p class="muted">Memuat…</p>
 {:else if cart.items.length === 0}
-	<p>Keranjang kosong. <a href="/">Belanja dulu</a></p>
+	<div class="panel">
+		<p>Keranjang masih kosong.</p>
+		<a class="btn btn-primary" href="/">Mulai belanja</a>
+	</div>
 {:else}
-	<ul>
+	<ul class="rows">
 		{#each cart.items as it}
-			<li>{it.name} × {it.qty} — {formatIDR(it.priceMinor * it.qty)}</li>
+			<li class="row">
+				<div class="grow"><strong>{it.name}</strong><br /><span class="muted">× {it.qty}</span></div>
+				<div class="price">{formatIDR(it.priceMinor * it.qty)}</div>
+			</li>
 		{/each}
 	</ul>
-	<p><strong>Subtotal: {formatIDR(cart.subtotalMinor)}</strong></p>
-	<a href="/checkout">Lanjut checkout →</a>
+	<p class="total">Subtotal: {formatIDR(cart.subtotalMinor)}</p>
+	<div class="btn-row" style="justify-content:flex-end">
+		<a class="btn btn-ghost" href="/">Lanjut belanja</a>
+		<a class="btn btn-primary" href="/checkout">Lanjut checkout →</a>
+	</div>
 {/if}
