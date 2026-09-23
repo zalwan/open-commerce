@@ -14,7 +14,8 @@
 
 | Name | Version | Purpose | Notes |
 |------|---------|---------|-------|
-| Go stdlib `net/http` | 1.25 | HTTP routing & handlers | Tanpa framework eksternal di v0.1 agar skeleton zero-deps |
+| Go stdlib `net/http` | 1.25 | HTTP routing & handlers | Tanpa framework web; lihat ADR-0001 |
+| `github.com/jackc/pgx/v5` | 5.11 | Postgres driver + pool (`pgxpool`) | Satu-satunya deps backend third-party; lihat ADR-0003 |
 | SvelteKit | 2.x | Frontend app framework, file-based routing | `@sveltejs/kit`, adapter-node untuk deploy |
 | Vite | 5.x | Frontend dev server & build | Bawaan SvelteKit |
 
@@ -29,8 +30,8 @@
 
 | Store | Type | Purpose | Notes |
 |-------|------|---------|-------|
-| Postgres | Relational | Prod store untuk produk, cart, order, user (doc intent) | v16; v0.1 skeleton pakai in-memory `Store` di balik interface agar bisa jalan tanpa DB |
-| In-memory maps | Ephemeral (process-local) | Skeleton persistence v0.1 | Diganti Postgres tanpa ubah handler/service (lihat ADR-0001) |
+| Postgres | Relational | Produk, cart, order persisten | v16; aktif bila `DATABASE_URL` terisi (migrasi auto-apply + seed-on-empty) |
+| In-memory maps | Ephemeral (process-local) | Dev/test tanpa DB | Dipakai bila `DATABASE_URL` kosong |
 
 ## Infrastructure and Hosting
 
@@ -45,14 +46,15 @@
 | Stage | Tool / Mechanism | Notes |
 |-------|------------------|-------|
 | Build | `go build ./...` + `npm run build` (frontend) | GitHub Actions `.github/workflows/` |
-| Test | `go test ./...` + `npm run check` (bila tersedia) | Wajib hijau sebelum merge |
-| Deploy | Docker build (api, web) + compose pull | Manual di v0.1; pipeline deploy otomatis non-goal |
+| Test | `go test ./...` + integration `-tags integration` (butuh Postgres) + `npm run check` | Unit wajib hijau; integrasi jalan di CI via service Postgres |
+| Deploy | Docker build (api, web) + compose pull | Manual di v0.2; pipeline deploy otomatis non-goal |
 
 ## Observability
 
 | Area | Tool / Mechanism | Notes |
 |------|------------------|-------|
 | Logs | Structured stdout (Go `log/slog`, frontend console) | Request log: method path status latency |
+| Metrics | None (v0.2) | `/healthz` liveness + `/readyz` readiness (ping DB bila dikonfigurasi) |
 | Metrics | None (v0.1) | `/healthz` untuk liveness saja |
 | Traces | None | — |
 

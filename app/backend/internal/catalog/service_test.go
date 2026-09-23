@@ -1,6 +1,9 @@
 package catalog
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestValidate(t *testing.T) {
 	if err := Validate(Product{Name: "A", PriceMinor: 100, Stock: 1}); err != nil {
@@ -15,19 +18,42 @@ func TestValidate(t *testing.T) {
 }
 
 func TestCreateAndList(t *testing.T) {
+	ctx := context.Background()
 	svc := NewService(NewMemoryStore())
-	before := len(svc.List(""))
-	p, err := svc.Create(Product{Name: "Keyboard", PriceMinor: 5000000, Stock: 5})
+	before, err := svc.List(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := svc.Create(ctx, Product{Name: "Keyboard", PriceMinor: 5000000, Stock: 5})
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
 	if p.ID == "" || p.Currency != "IDR" {
 		t.Fatalf("unexpected product: %+v", p)
 	}
-	if got := len(svc.List("keyboard")); got != 1 {
-		t.Fatalf("expected 1 search hit, got %d", got)
+	hits, err := svc.List(ctx, "keyboard")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := len(svc.List("")); got != before+1 {
-		t.Fatalf("expected %d products, got %d", before+1, got)
+	if len(hits) != 1 {
+		t.Fatalf("expected 1 search hit, got %d", len(hits))
+	}
+	all, err := svc.List(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != len(before)+1 {
+		t.Fatalf("expected %d products, got %d", len(before)+1, len(all))
+	}
+}
+
+func TestCreateDuplicate(t *testing.T) {
+	ctx := context.Background()
+	svc := NewService(NewMemoryStore())
+	if _, err := svc.Create(ctx, Product{ID: "p-dup", Name: "Dup", PriceMinor: 100, Stock: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(ctx, Product{ID: "p-dup", Name: "Dup", PriceMinor: 100, Stock: 1}); err != ErrAlreadyExists {
+		t.Fatalf("expected ErrAlreadyExists, got %v", err)
 	}
 }

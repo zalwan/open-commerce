@@ -1,7 +1,8 @@
-// Package cart owns session carts. No stock reservation in v0.1.
+// Package cart owns session carts. No stock reservation in v0.2.
 package cart
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -28,70 +29,116 @@ var (
 	ErrBadQty       = errors.New("qty must be > 0")
 	ErrNoProduct    = errors.New("product not found")
 	ErrOutOfStock   = errors.New("qty exceeds stock")
+	ErrCartNotFound = errors.New("cart not found")
 )
 
-// Service validates against catalog and keeps carts in memory.
-type Service struct {
-	mu      sync.Mutex
-	carts   map[string]*Cart
-	catalog *catalog.Service
+// Store abstracts cart persistence: memory (dev) or Postgres (DATABASE_URL set).
+type Store interface {
+	Get(ctx context.Context, sessionID string) (Cart, error)
+	Save(ctx context.Context, c Cart) error
+	Delete(ctx context.Context, sessionID string) error
 }
 
-func NewService(catalogSvc *catalog.Service) *Service {
-	return &Service{carts: make(map[string]*Cart), catalog: catalogSvc}
+// MemoryStore keeps carts process-local. Used when DATABASE_URL is empty.
+type MemoryStore struct {
+	mu    sync.Mutex
+	carts map[string]*Cart
 }
 
-func (s *Service) Get(sessionID string) Cart {
+func NewMemoryStore() *MemoryStore { return &MemoryStore{carts: make(map[string]*Cart)} }
+
+func (s *MemoryStore) Get(_ context.Context, sessionID string) (Cart, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	c, ok := s.carts[sessionID]
 	if !ok {
-		return Cart{SessionID: sessionID, Items: []Item{}}
+		return Cart{}, ErrCartNotFound
 	}
-	return *c
+	cp := *c
+	return cp, nil
 }
 
-func (s *Service) AddItem(sessionID, productID string, qty int) (Cart, error) {
+func (s *MemoryStore) Save(_ context.Context, c Cart) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cp := c
+	s.carts[c.SessionID] = &cp
+	return nil
+}
+
+func (s *MemoryStore) Delete(_ context.Context, sessionID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.carts, sessionID)
+	return nil
+}
+
+// Service validates against catalog and delegates persistence to a Store.
+type Service struct {
+	store   Store
+	catalog *catalog.Service
+}
+
+func NewService(store Store, catalogSvc *catalog.Service) *Service {
+	return &Service{store: store, catalog: catalogSvc}
+}
+
+func (s *Service) Get(ctx context.Context, sessionID string) (Cart, error) {
+	if sessionID == "" {
+		return Cart{}, ErrEmptySession
+	}
+	c, err := s.store.Get(ctx, sessionID)
+	if errors.Is(err, ErrCartNotFound) {
+		return Cart{SessionID: sessionID, Items: []Item{}}, nil
+	}
+	return c, err
+}
+
+func (s *Service) AddItem(ctx context.Context, sessionID, productID string, qty int) (Cart, error) {
 	if sessionID == "" {
 		return Cart{}, ErrEmptySession
 	}
 	if qty <= 0 {
 		return Cart{}, ErrBadQty
 	}
-	p, err := s.catalog.Get(productID)
+	p, err := s.catalog.Get(ctx, productID)
 	if err != nil {
 		return Cart{}, ErrNoProduct
 	}
 	if qty > p.Stock {
 		return Cart{}, ErrOutOfStock
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.carts[sessionID]
-	if !ok {
-		c = &Cart{SessionID: sessionID}
-		s.carts[sessionID] = c
+	c, err := s.Get(ctx, sessionID)
+	if err != nil {
+		return Cart{}, err
 	}
+	merged := false
 	for i, it := range c.Items {
 		if it.ProductID == productID {
 			c.Items[i].Qty += qty
 			c.Items[i].PriceMinor = p.PriceMinor
 			c.Items[i].Name = p.Name
-			c.recalc()
-			return *c, nil
+			merged = true
+			break
 		}
 	}
-	c.Items = append(c.Items, Item{ProductID: p.ID, Name: p.Name, PriceMinor: p.PriceMinor, Qty: qty})
+	if !merged {
+		c.Items = append(c.Items, Item{ProductID: p.ID, Name: p.Name, PriceMinor: p.PriceMinor, Qty: qty})
+	}
 	c.recalc()
-	return *c, nil
+	if err := s.store.Save(ctx, c); err != nil {
+		return Cart{}, err
+	}
+	return c, nil
 }
 
-func (s *Service) RemoveItem(sessionID, productID string) Cart {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.carts[sessionID]
-	if !ok {
-		return Cart{SessionID: sessionID, Items: []Item{}}
+func (s *Service) RemoveItem(ctx context.Context, sessionID, productID string) (Cart, error) {
+	if sessionID == "" {
+		return Cart{}, ErrEmptySession
+	}
+	c, err := s.Get(ctx, sessionID)
+	if err != nil {
+		return Cart{}, err
 	}
 	kept := c.Items[:0]
 	for _, it := range c.Items {
@@ -101,13 +148,14 @@ func (s *Service) RemoveItem(sessionID, productID string) Cart {
 	}
 	c.Items = kept
 	c.recalc()
-	return *c
+	if err := s.store.Save(ctx, c); err != nil {
+		return Cart{}, err
+	}
+	return c, nil
 }
 
-func (s *Service) Clear(sessionID string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.carts, sessionID)
+func (s *Service) Clear(ctx context.Context, sessionID string) error {
+	return s.store.Delete(ctx, sessionID)
 }
 
 func (c *Cart) recalc() {

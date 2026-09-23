@@ -4,14 +4,14 @@
 
 - Style: `modular monolith` (backend Go) + `client-server` (SvelteKit frontend → Go REST API).
 - Key patterns: handler → service → store (backend); file-based routing + load functions (frontend); interface-stub untuk payment/auth.
-- Decision references: [0001-go-sveltekit-modular-monolith](../decisions/0001-go-sveltekit-modular-monolith.md), [0002-stub-payment-auth](../decisions/0002-stub-payment-auth.md).
+- Decision references: [0001-go-sveltekit-modular-monolith](../decisions/0001-go-sveltekit-modular-monolith.md), [0002-stub-payment-auth](../decisions/0002-stub-payment-auth.md), [0003-postgres-pgx-embedded-migrations](../decisions/0003-postgres-pgx-embedded-migrations.md).
 
 ## System Overview
 
-Single-vendor toko online: SvelteKit me-render storefront/admin dan memanggil Go API via REST JSON. Go API menegakkan aturan domain (katalog, cart, order) dan persist via interface `Store` (in-memory di v0.1, Postgres di v0.2+). Payment dan auth adalah stub in-process yang bisa diganti implementasi real tanpa mengubah handler.
+Single-vendor toko online: SvelteKit me-render storefront/admin dan memanggil Go API via REST JSON. Go API menegakkan aturan domain (katalog, cart, order) dan persist via interface `Store` yang ber-`error` + `context`: implementasi memory bila `DATABASE_URL` kosong (dev cepat, seed 3 produk), Postgres via `pgxpool` bila terisi (migrasi `internal/db/migrations/` auto-apply, seed-on-empty). Payment dan auth adalah stub in-process yang bisa diganti implementasi real tanpa mengubah handler.
 
 ```text
-browser --> SvelteKit web (:5173/:3000) --REST /api/v1--> Go API (:8080) --> Store (memory v0.1 / Postgres v0.2+)
+browser --> SvelteKit web (:5173/:3000) --REST /api/v1--> Go API (:8080) --> Store (memory | Postgres via pgxpool)
                                                      Go API --> PaymentStub (mock)
                                                      Go API --> AuthStub (mock token)
 ```
@@ -36,15 +36,15 @@ Summarized here; detail in [components.md](./components.md).
 | From → To | Mechanism | Notes |
 |-----------|-----------|-------|
 | Browser → SvelteKit | Request-response HTTP (SSR + CSR hydration) | Sync; SvelteKit load() untuk data awal |
-| SvelteKit → Go API | REST JSON `GET/POST /api/v1/*` | Sync; base URL via `PUBLIC_API_BASE_URL`, kontrak di `docs/system/components.md` + tipe TS di `lib/api.ts` |
-| HTTP handler → Service | In-process function calls (Go) | Sync; handler tidak akses store langsung |
-| Service → Store | In-process via `Store` interfaces | Sync; in-memory v0.1, Postgres v0.2 |
+| SvelteKit → Go API | REST JSON `GET/POST/PUT/DELETE /api/v1/*` | Sync; base URL via `PUBLIC_API_BASE_URL`, kontrak di `docs/system/components.md` + tipe TS di `lib/api.ts`; admin routes bawa `Authorization: Bearer` |
+| HTTP handler → Service | In-process function calls (Go, `context.Context`) | Sync; handler tidak akses store langsung; error domain → 4xx, error store → 500 generik |
+| Service → Store | In-process via `Store` interfaces (ber-`error`) | Sync; memory default, Postgres bila `DATABASE_URL` terisi |
 | Order service → Payment stub | In-process interface `Charge()` | Sync; mock latency kecil, status deterministik |
 
 ## Data Flows
 
 1. Browse & beli: `GET /api/v1/products` → render katalog → `POST /api/v1/cart/items` (session) → `POST /api/v1/orders/checkout` → order service panggil payment stub → order `paid|pending` → frontend halaman sukses.
-2. Admin kelola: login stub → token → `POST /api/v1/admin/products` → catalog service validasi → store simpan → list ter-refresh. Order: `GET /api/v1/admin/orders` → ubah status (`processing → shipped → done`).
+2. Admin kelola: login stub → token → `POST /api/v1/admin/products` → catalog service validasi → store simpan (Postgres upsert bila dikonfigurasi) → list ter-refresh. Order: `GET /api/v1/admin/orders` → ubah status (`paid → shipped → done`) via `POST /api/v1/admin/orders/{id}/status`.
 
 ## Boundaries
 
@@ -66,14 +66,14 @@ Summarized here; detail in [components.md](./components.md).
 
 ## Scalability Considerations
 
-- Stateless API kecuali in-memory store v0.1 (tidak scale horizontal — diketahui, diganti Postgres).
-- SvelteKit SSR stateless; session cart di server Go (cookie session id) — pindah ke Redis/DB bila scale.
+- Stateless API; Postgres sebagai state bersama (pool maks 10 koneksi). Mode memory tetap single-process non-persisten (dev only).
+- SvelteKit SSR stateless; session cart di server Go (cookie session id) — tersimpan di tabel `carts` bila Postgres aktif.
 - Bottleneck diketahui: single-process Go + map + mutex cukup untuk fondasi/demo.
 
 ## Failure Modes
 
 | Failure | Impact | Mitigation |
 |---------|--------|------------|
-| Go API down | Storefront gagal fetch → halaman error dengan retry | `/healthz` untuk probe; frontend tampilkan pesan + tombol retry |
-| Payment stub `fail=true` | Checkout 402 + order `payment_failed` | Frontend tampilkan error; user bisa retry; tidak ada charge ganda (idempotency-key sederhana di v0.2) |
-| Postgres belum ada (v0.1) | Tidak berdampak — memory store aktif | Migrasi v0.2 membawa `DATABASE_URL` + health check DB |
+| Go API down | Storefront gagal fetch → halaman error dengan retry | `/healthz` liveness + `/readyz` readiness (gagal bila DB unreachable) untuk probe |
+| Payment stub `fail=true` | Checkout 402 + order `payment_failed` | Frontend tampilkan error; user bisa retry; tidak ada charge ganda |
+| Postgres unreachable (mode DB) | Startup gagal fast + `/readyz` 503 | Cek `DATABASE_URL`, `docker compose -f infra/compose.yaml up db`; fallback memory dengan mengosongkan `DATABASE_URL` |

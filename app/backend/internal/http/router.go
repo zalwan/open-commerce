@@ -2,6 +2,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -22,6 +23,8 @@ type Deps struct {
 	Order   *order.Service
 	Auth    *auth.Service
 	Pay     payment.Provider
+	// Ready is nil on memory store; set to a DB ping when Postgres is configured.
+	Ready func(ctx context.Context) error
 }
 
 // NewRouter builds the mux with logging + CORS middleware.
@@ -32,6 +35,7 @@ func NewRouter(d Deps, logger *slog.Logger) http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	})
+	mux.HandleFunc("GET /readyz", h.readyz)
 	// Catalog (public read).
 	mux.HandleFunc("GET /api/v1/products", h.listProducts)
 	mux.HandleFunc("GET /api/v1/products/{id}", h.getProduct)

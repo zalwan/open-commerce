@@ -4,7 +4,8 @@
 
 - Go >= 1.25, Node >= 22 LTS. Versi minimum mengikat; upgrade butuh uji `go test` + `npm run build`.
 - API versioning: publik hanya `/api/v1/*`. Breaking change butuh versi baru + ADR, tidak boleh ubah v1 in-place.
-- Backend zero third-party deps di v0.1 (stdlib only). Tambah dependency butuh justifikasi + update `technology.md` + `project.yaml`.
+- Backend dependency third-party di-allowlist: hanya `github.com/jackc/pgx/v5` (ADR-0003). Tambah dependency lain butuh ADR + update `technology.md` + `project.yaml`.
+- Migrasi DB hanya aditif (`CREATE TABLE/INDEX IF NOT EXISTS`, sequence). Alter destruktif (DROP/RENAME kolom) butuh ADR + rencana migrasi data.
 - Frontend: TypeScript strict, tidak ada `any` tanpa alasan; SvelteKit file-routing tetap dipakai (jangan custom router).
 - Data: harga dalam minor units (`priceMinor` int64, mis. rupiah sen) — tidak ada float untuk uang.
 
@@ -16,7 +17,7 @@
 
 ## Operational Constraints
 
-- `GET /healthz` wajib ada dan tanpa auth; dipakai probe Docker/K8s.
+- `GET /healthz` (tanpa DB) dan `GET /readyz` (ping DB bila dikonfigurasi) wajib ada dan tanpa auth; dipakai probe Docker/K8s.
 - Konfigurasi via env + `config/app.yaml`; dilarang hardcode port/URL/credential di kode.
 - Upload file produk out-of-scope v0.1 — hanya URL gambar eksternal.
 

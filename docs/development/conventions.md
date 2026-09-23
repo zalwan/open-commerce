@@ -4,7 +4,9 @@
 
 ## Code Style
 
-- Go: `gofmt -l .` harus bersih; paket `internal/{catalog,cart,order,auth,payment,http}`; handler tidak akses store langsung (via service). Harga int64 minor units, JSON snake? tidak — pakai camelCase sesuai `lib/api.ts` (`priceMinor`, `session_id` hanya untuk body cart/checkout warisan — konsisten dengan tipe TS).
+- Go: `gofmt -l .` harus bersih; paket `internal/{catalog,cart,order,auth,payment,http,db}`; handler tidak akses store langsung (via service). Service tidak boleh `sql`/`pgx` langsung — hanya via interface `Store`. Harga int64 minor units, JSON camelCase sesuai `lib/api.ts`.
+- Error: domain error (`ErrNotFound`, validasi, `ErrBadStatus`) → 4xx via helper `catalogErr/cartErr/orderErr`; error store/DB → 500 generik tanpa bocorkan detail driver.
+- Migrasi: file baru `internal/db/migrations/NNNN-*.sql`, aditif saja, tanpa semicolon di dalam komentar; diverifikasi via integration test.
 - SvelteKit: TypeScript `strict`, file-routing di `src/routes`, API client hanya via `src/lib/api.ts`, session/token via `src/lib/session.ts`. Tidak ada `any` tanpa komentar alasan.
 - Format: Go `gofmt`, frontend `npx prettier --check` bila ditambah (opsional v0.1).
 
@@ -16,10 +18,10 @@
 
 ## Testing
 
-- Backend: `go test ./...` di `app/backend`. Service baru wajib unit test (validasi + happy/fail path). HTTP route baru wajib test status.
-- Frontend: `npm run build` wajib lolos; `npm run check` bila disentuh routes/lib.
-- E2E smoke: `sh tests/smoke.sh` (butuh API di :8080).
-- Coverage target v0.1: domain services teruji; HTML routes manual.
+- Backend: `go test ./...` di `app/backend`. Service baru wajib unit test (validasi + happy/fail path). HTTP route baru wajib test status. Store PG baru wajib dicover integration test (`-tags integration`, butuh `DATABASE_URL`).
+- Frontend: `npm run build` + `npm run check` wajib lolos bila disentuh routes/lib.
+- E2E smoke: `sh tests/smoke.sh` (butuh API di :8080); sertakan alur admin untuk perubahan admin.
+- Coverage target: domain services + transisi status teruji; HTML routes manual.
 
 ## Configuration and Secrets
 

@@ -3,11 +3,11 @@
 ## Catalog Service
 
 - **Responsibility:** Aturan produk (nama wajib, harga > 0, stok >= 0); list/search publik, CRUD admin. Tidak mengurus cart/order.
-- **Source location:** `app/backend/internal/catalog/`
-- **Dependencies:** `Store` interface (in-memory v0.1).
+- **Source location:** `app/backend/internal/catalog/` (`service.go`, `memory.go`, `store_pg.go`)
+- **Dependencies:** `Store` interface (memory default; `PGStore` via pgxpool bila `DATABASE_URL` terisi).
 - **Consumers:** HTTP handlers `GET /api/v1/products`, `GET /api/v1/products/{id}`, admin product endpoints.
-- **Interfaces:** `Service.List(q string)`, `Service.Get(id)`, `Service.Create/Update/Delete` — JSON di `internal/http/`.
-- **Data stores:** Product map (memory) → Postgres `products` di v0.2.
+- **Interfaces:** `Service.List(ctx,q)`, `Get(ctx,id)`, `Create/Update/Delete` (semua ber-`error`) — JSON di `internal/http/`.
+- **Data stores:** Memory map → tabel Postgres `products` (+ `SeedIfEmpty` untuk DB segar).
 - **Operational notes:** Read-heavy; validasi harga/stok di service, bukan handler.
 
 ---
@@ -15,11 +15,11 @@
 ## Cart Service
 
 - **Responsibility:** Keranjang per-session (`session_id` cookie): add/update/remove/clear, hitung subtotal. Tidak persist lintas restart di v0.1.
-- **Source location:** `app/backend/internal/cart/`
-- **Dependencies:** Catalog service (cek produk & harga snapshot), `Store`.
+- **Source location:** `app/backend/internal/cart/` (`service.go`, `store_pg.go`)
+- **Dependencies:** Catalog service (cek produk & harga snapshot), `Store` (memory/`carts` JSONB).
 - **Consumers:** `POST /api/v1/cart/items`, `GET /api/v1/cart`, `DELETE /api/v1/cart/items/{productID}`.
-- **Interfaces:** `Service.Get(sessionID)`, `Service.AddItem(sessionID, productID, qty)`, dsb.
-- **Data stores:** Cart map (memory) → Postgres/Redis di v0.3.
+- **Interfaces:** `Service.Get/AddItem/RemoveItem/Clear` (ctx + error); cart hilang → dianggap kosong.
+- **Data stores:** Memory map → tabel `carts(session_id, items JSONB)`.
 - **Operational notes:** Qty <= stok saat add (best-effort, bukan reservasi stok).
 
 ---
@@ -27,11 +27,11 @@
 ## Order Service
 
 - **Responsibility:** Checkout: snapshot cart → hitung total → panggil payment stub → buat order dengan status (`pending|paid|payment_failed|shipped|done|cancelled`). Transisi status tervalidasi.
-- **Source location:** `app/backend/internal/order/`
+- **Source location:** `app/backend/internal/order/` (`service.go`, `store_pg.go`)
 - **Dependencies:** Cart service, Payment stub, `Store`.
 - **Consumers:** `POST /api/v1/orders/checkout`, `GET /api/v1/orders/{id}`, admin order endpoints.
-- **Interfaces:** `Service.Checkout(sessionID, req)`, `Service.Get(id)`, `Service.SetStatus(id, status)`.
-- **Data stores:** Order map (memory) → Postgres `orders` + `order_items` di v0.2.
+- **Interfaces:** `Service.Checkout(ctx, sessionID, req)`, `Get`, `SetStatus` (lifecycle tervalidasi).
+- **Data stores:** Memory map → tabel `orders` (items JSONB, ID dari sequence `order_seq` → `o-<n>`).
 - **Operational notes:** Idempotency minimal via session clear setelah sukses; payment gagal → order tetap tercatat `payment_failed` untuk retry.
 
 ---
@@ -60,18 +60,32 @@
 
 ---
 
+## DB Bootstrap
+
+- **Responsibility:** Buka pool pgx, apply migrasi embed, seed-on-empty. Hanya aktif bila `DATABASE_URL` terisi.
+- **Source location:** `app/backend/internal/db/` (+ `migrations/0001_init.sql`)
+- **Dependencies:** Postgres 16 reachable.
+- **Consumers:** `cmd/api/main.go` saat startup; `GET /readyz` untuk ping.
+- **Interfaces:** `db.Open(ctx, url)`, `db.Migrate(ctx, pool)`.
+- **Data stores:** Skema `products`, `carts`, `orders`, sequence `order_seq`.
+- **Operational notes:** DDL aditif saja; startup gagal fast bila DB unreachable.
+
+---
+
 ## HTTP API Layer
 
-- **Responsibility:** Routing, JSON encode/decode, validasi bentuk request, request log, CORS dev, `GET /healthz`.
+- **Responsibility:** Routing, JSON encode/decode, validasi bentuk request, pemetaan error domain→4xx (error store→500 generik), request log, CORS dev, `GET /healthz` + `GET /readyz`.
 - **Source location:** `app/backend/internal/http/`, `app/backend/cmd/api/main.go`
 - **Dependencies:** Semua services (di-wire di `main.go`).
 - **Consumers:** Frontend SvelteKit + API client eksternal.
-- **Interfaces:** REST `GET/POST /api/v1/*` — kontrak:
-  - `GET /healthz` → `{"ok":true}`
+- **Interfaces:** REST `GET/POST/PUT/DELETE /api/v1/*` — kontrak:
+  - `GET /healthz` → `{"ok":true}` (tanpa auth, tanpa DB)
+  - `GET /readyz` → `{"ready":true}` atau 503 bila DB unreachable
   - `GET /api/v1/products?q=` → `[{id,name,priceMinor,currency,stock}]`
   - `POST /api/v1/cart/items {"session_id","product_id","qty"}` → cart
-  - `POST /api/v1/orders/checkout {"session_id","email","fail?"}` → order
+  - `POST /api/v1/orders/checkout {"session_id","email","fail?"}` → order (402 + body order bila payment gagal)
   - `POST /api/v1/auth/login` → `{"token","role"}`
+  - Admin (Bearer admin): CRUD produk + `GET /api/v1/admin/orders` + `POST /api/v1/admin/orders/{id}/status`
 - **Data stores:** None langsung.
 - **Operational notes:** Port via `PORT` (default 8080); JSON error envelope `{"error":"..."}`.
 
@@ -91,10 +105,10 @@
 
 ## Admin Web
 
-- **Responsibility:** Login stub, produk list/form, order list/detail + ubah status.
-- **Source location:** `app/frontend/src/routes/admin/`
+- **Responsibility:** Login stub, produk list + form tambah/edit + hapus, order list + tombol advance status.
+- **Source location:** `app/frontend/src/routes/admin/` (+ `lib/api.ts` fungsi `createProduct/updateProduct/deleteProduct/adminOrders/setOrderStatus` dengan header Bearer)
 - **Dependencies:** Go API + token di localStorage.
 - **Consumers:** Admin toko (browser).
-- **Interfaces:** Routes `/admin`, `/admin/products`, `/admin/orders`; header `Authorization: Bearer <token>`.
+- **Interfaces:** Routes `/admin`, `/admin/products`, `/admin/orders`; guard: tanpa token → pesan login (server tetap 401/403).
 - **Data stores:** None langsung.
 - **Operational notes:** Guard client-side + server-side 401/403 dari API.

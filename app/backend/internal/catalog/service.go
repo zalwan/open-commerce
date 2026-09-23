@@ -2,6 +2,7 @@
 package catalog
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -19,12 +20,12 @@ type Product struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
-// Store abstracts persistence; v0.1 uses memory, v0.2+ Postgres.
+// Store abstracts persistence: MemoryStore (dev/test) or PGStore (DATABASE_URL set).
 type Store interface {
-	List() []Product
-	Get(id string) (Product, bool)
-	Save(p Product)
-	Delete(id string) bool
+	List(ctx context.Context) ([]Product, error)
+	Get(ctx context.Context, id string) (Product, error)
+	Save(ctx context.Context, p Product) error
+	Delete(ctx context.Context, id string) error
 }
 
 var (
@@ -43,10 +44,13 @@ type Service struct {
 func NewService(store Store) *Service { return &Service{store: store} }
 
 // List returns all products, optionally filtered by case-insensitive name query.
-func (s *Service) List(q string) []Product {
-	all := s.store.List()
+func (s *Service) List(ctx context.Context, q string) ([]Product, error) {
+	all, err := s.store.List(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if q == "" {
-		return all
+		return all, nil
 	}
 	q = strings.ToLower(q)
 	out := make([]Product, 0, len(all))
@@ -55,13 +59,13 @@ func (s *Service) List(q string) []Product {
 			out = append(out, p)
 		}
 	}
-	return out
+	return out, nil
 }
 
-func (s *Service) Get(id string) (Product, error) {
-	p, ok := s.store.Get(id)
-	if !ok {
-		return Product{}, ErrNotFound
+func (s *Service) Get(ctx context.Context, id string) (Product, error) {
+	p, err := s.store.Get(ctx, id)
+	if err != nil {
+		return Product{}, err
 	}
 	return p, nil
 }
@@ -79,12 +83,14 @@ func Validate(p Product) error {
 	return nil
 }
 
-func (s *Service) Create(p Product) (Product, error) {
+func (s *Service) Create(ctx context.Context, p Product) (Product, error) {
 	if err := Validate(p); err != nil {
 		return Product{}, err
 	}
-	if _, ok := s.store.Get(p.ID); ok && p.ID != "" {
-		return Product{}, ErrAlreadyExists
+	if p.ID != "" {
+		if _, err := s.store.Get(ctx, p.ID); err == nil {
+			return Product{}, ErrAlreadyExists
+		}
 	}
 	if p.ID == "" {
 		p.ID = "p-" + strings.ToLower(strings.ReplaceAll(strings.TrimSpace(p.Name), " ", "-"))
@@ -93,29 +99,30 @@ func (s *Service) Create(p Product) (Product, error) {
 		p.Currency = "IDR"
 	}
 	p.CreatedAt = time.Now().UTC()
-	s.store.Save(p)
+	if err := s.store.Save(ctx, p); err != nil {
+		return Product{}, err
+	}
 	return p, nil
 }
 
-func (s *Service) Update(p Product) (Product, error) {
+func (s *Service) Update(ctx context.Context, p Product) (Product, error) {
 	if err := Validate(p); err != nil {
 		return Product{}, err
 	}
-	existing, ok := s.store.Get(p.ID)
-	if !ok {
-		return Product{}, ErrNotFound
+	existing, err := s.store.Get(ctx, p.ID)
+	if err != nil {
+		return Product{}, err
 	}
 	p.CreatedAt = existing.CreatedAt
 	if p.Currency == "" {
 		p.Currency = existing.Currency
 	}
-	s.store.Save(p)
+	if err := s.store.Save(ctx, p); err != nil {
+		return Product{}, err
+	}
 	return p, nil
 }
 
-func (s *Service) Delete(id string) error {
-	if !s.store.Delete(id) {
-		return ErrNotFound
-	}
-	return nil
+func (s *Service) Delete(ctx context.Context, id string) error {
+	return s.store.Delete(ctx, id)
 }

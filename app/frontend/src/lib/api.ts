@@ -36,11 +36,13 @@ export interface Order {
 	paymentTx?: string;
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
-	const res = await fetch(`${API_BASE}${path}`, {
-		headers: { 'Content-Type': 'application/json' },
-		...init
-	});
+async function req<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
+	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+	if (init?.headers) {
+		for (const [k, v] of Object.entries(init.headers as Record<string, string>)) headers[k] = v;
+	}
+	if (token) headers['Authorization'] = `Bearer ${token}`;
+	const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
 	if (!res.ok) {
 		const body = await res.text();
 		throw new Error(`API ${res.status}: ${body}`);
@@ -68,7 +70,17 @@ export const api = {
 		req<{ token: string; role: string }>('/api/v1/auth/login', {
 			method: 'POST',
 			body: JSON.stringify({ email, password })
-		})
+		}),
+	// Admin (butuh token stub admin).
+	createProduct: (token: string, p: Partial<Product>) =>
+		req<Product>('/api/v1/admin/products', { method: 'POST', body: JSON.stringify(p) }, token),
+	updateProduct: (token: string, id: string, p: Partial<Product>) =>
+		req<Product>(`/api/v1/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(p) }, token),
+	deleteProduct: (token: string, id: string) =>
+		req<void>(`/api/v1/admin/products/${id}`, { method: 'DELETE' }, token),
+	adminOrders: (token: string) => req<Order[]>('/api/v1/admin/orders', {}, token),
+	setOrderStatus: (token: string, id: string, status: string) =>
+		req<Order>(`/api/v1/admin/orders/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }, token)
 };
 
 export function formatIDR(minor: number): string {

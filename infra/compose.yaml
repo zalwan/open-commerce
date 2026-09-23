@@ -1,7 +1,7 @@
-# Services for local development.
-# v0.1: api + web run from source; db (Postgres 16) is standby for v0.2.
-# Usage: docker compose -f infra/compose.yaml up db  (then run api/web locally)
+# Services for local development (v0.2: Postgres is the active store when api runs via compose).
+# Usage: docker compose -f infra/compose.yaml up db  (then run api/web locally from source)
 # Full images: docker compose -f infra/compose.yaml up --build
+# NOTE: build contexts are repo-root so Dockerfiles can COPY app/... paths.
 
 services:
   db:
@@ -22,8 +22,8 @@ services:
 
   api:
     build:
-      context: ../app/backend
-      dockerfile: ../../infra/Dockerfile.api
+      context: ..
+      dockerfile: infra/Dockerfile.api
     environment:
       PORT: "8080"
       DATABASE_URL: "postgres://opencommerce:opencommerce@db:5432/opencommerce?sslmode=disable"
@@ -32,15 +32,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # No in-image healthcheck: the distroless runtime ships no shell/wget.
+    # Probe from host instead: curl localhost:8080/healthz (liveness),
+    # curl localhost:8080/readyz (DB readiness).
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz | grep ok"]
-      interval: 10s
-      retries: 5
+      disable: true
 
   web:
     build:
-      context: ../app/frontend
-      dockerfile: ../../infra/Dockerfile.web
+      context: ..
+      dockerfile: infra/Dockerfile.web
       args:
         PUBLIC_API_BASE_URL: http://localhost:8080
     ports:
