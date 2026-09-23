@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
-	import { api, formatIDR } from '$lib/api';
-	import type { Product } from '$lib/api';
+	import { api } from '$lib/api';
 	import type { HeroScene } from '$lib/hero-scene';
+	import ProductCard from '$lib/ProductCard.svelte';
 
 	let q = '';
 	let promise = api.products();
@@ -38,18 +38,6 @@
 	function search() {
 		promise = api.products(q);
 	}
-
-	function stockBadge(p: Product): string {
-		if (p.stock <= 0) return 'badge badge-err';
-		if (p.stock <= 5) return 'badge badge-warn';
-		return 'badge badge-ok';
-	}
-
-	function stockLabel(p: Product): string {
-		if (p.stock <= 0) return 'Out of stock';
-		if (p.stock <= 5) return `Only ${p.stock} left`;
-		return `In stock (${p.stock})`;
-	}
 </script>
 
 <div class="hero">
@@ -74,23 +62,18 @@
 		<p>No matching products yet.</p>
 	{:else}
 		<ul class="grid">
-			{#each products as p}
-				<li class="card">
-					<a class="thumb" href={`/products/${p.id}`} aria-label={p.name}>
-						{#if p.imageUrl}
-							<img src={p.imageUrl} alt={p.name} />
-						{:else}
-							{p.name.slice(0, 1)}
-						{/if}
-					</a>
-					<div class="card-body">
-						<a class="title" href={`/products/${p.id}`}>{p.name}</a>
-						<div class="price">{formatIDR(p.priceMinor)}</div>
-						<span class={stockBadge(p)}>{stockLabel(p)}</span>
-					</div>
-				</li>
+			{#each products as p (p.id)}
+				<ProductCard product={p} />
 			{/each}
 		</ul>
+		<div class="strip">
+			<span class="strip-label">{products.length} products live · powered by</span>
+			<span class="chip">Go 1.25 API</span>
+			<span class="chip">Postgres 16</span>
+			<span class="chip">SvelteKit 2</span>
+			<span class="chip">Three.js hero</span>
+			<span class="chip">MIT</span>
+		</div>
 	{/if}
 {:catch e}
 	<p class="alert-error">Failed to load: {e.message}</p>

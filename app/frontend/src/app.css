@@ -113,6 +113,49 @@ code {
 	color: var(--brand-dim);
 }
 
+.cart-count {
+	display: inline-block;
+	font-size: 0.7rem;
+	background: var(--brand);
+	color: #06281d;
+	border-radius: 999px;
+	padding: 0 0.45rem;
+	margin-left: 0.15rem;
+	font-weight: 700;
+}
+
+/* ---- homepage stack strip ---- */
+
+.strip {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	margin-top: 1.75rem;
+	padding: 0.9rem 1.1rem;
+	border: 1px dashed rgb(255 255 255 / 0.14);
+	border-radius: var(--radius);
+	background: rgb(255 255 255 / 0.02);
+}
+
+.strip-label {
+	font-family: var(--mono);
+	font-size: 0.78rem;
+	color: var(--muted);
+	margin-right: 0.25rem;
+}
+
+.chip {
+	font-family: var(--mono);
+	font-size: 0.75rem;
+	color: var(--brand-dim);
+	border: 1px solid rgb(52 211 153 / 0.35);
+	background: var(--brand-soft);
+	border-radius: 999px;
+	padding: 0.15rem 0.65rem;
+	white-space: nowrap;
+}
+
 .container {
 	max-width: 1024px;
 	margin: 0 auto;
