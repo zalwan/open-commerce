@@ -7,13 +7,17 @@
 	let products: Product[] = [];
 	let error = '';
 	let msg = '';
-	let form: { name: string; priceMinor: number; stock: number; description: string } = {
+	let form: { name: string; priceMinor: number; stock: number; description: string; category: string } = {
 		name: '',
 		priceMinor: 0,
 		stock: 0,
-		description: ''
+		description: '',
+		category: ''
 	};
 	let editing: string | null = null;
+	let file: File | null = null;
+	let previewUrl = '';
+	let uploading = false;
 
 	function token(): string {
 		const t = getToken();
@@ -22,7 +26,7 @@
 	}
 
 	async function reload() {
-		products = await api.products();
+		products = (await api.products({ perPage: 100 })).items;
 	}
 
 	onMount(() => {
@@ -37,7 +41,8 @@
 					name: form.name,
 					priceMinor: form.priceMinor,
 					stock: form.stock,
-					description: form.description
+					description: form.description,
+					category: form.category
 				});
 				msg = 'Product updated.';
 			} else {
@@ -45,12 +50,13 @@
 					name: form.name,
 					priceMinor: form.priceMinor,
 					stock: form.stock,
-					description: form.description
+					description: form.description,
+					category: form.category
 				});
 				msg = 'Product created.';
 			}
 			editing = null;
-			form = { name: '', priceMinor: 0, stock: 0, description: '' };
+			form = { name: '', priceMinor: 0, stock: 0, description: '', category: '' };
 			await reload();
 		} catch (e) {
 			msg = e instanceof Error ? e.message : 'Failed to save';
@@ -59,12 +65,37 @@
 
 	function edit(p: Product) {
 		editing = p.id;
-		form = { name: p.name, priceMinor: p.priceMinor, stock: p.stock, description: p.description ?? '' };
+		form = { name: p.name, priceMinor: p.priceMinor, stock: p.stock, description: p.description ?? '', category: p.category ?? '' };
 	}
 
 	function cancel() {
 		editing = null;
-		form = { name: '', priceMinor: 0, stock: 0, description: '' };
+		file = null;
+		previewUrl = '';
+		form = { name: '', priceMinor: 0, stock: 0, description: '', category: '' };
+	}
+
+	function pickFile(e: Event) {
+		const input = e.target as HTMLInputElement;
+		file = input.files?.[0] ?? null;
+		previewUrl = file ? URL.createObjectURL(file) : '';
+	}
+
+	async function upload() {
+		if (!editing || !file) return;
+		uploading = true;
+		msg = '';
+		try {
+			const updated = await api.uploadImage(token(), editing, file);
+			msg = `Photo uploaded: ${updated.imageUrl}`;
+			file = null;
+			previewUrl = '';
+			await reload();
+		} catch (e) {
+			msg = e instanceof Error ? e.message : 'Upload failed';
+		} finally {
+			uploading = false;
+		}
 	}
 
 	async function remove(id: string) {
@@ -89,11 +120,23 @@
 		<label class="field">Price (IDR, no separators)<input class="input" type="number" min="1" required bind:value={form.priceMinor} /></label>
 		<label class="field">Stock<input class="input" type="number" min="0" required bind:value={form.stock} /></label>
 		<label class="field">Description<input class="input" bind:value={form.description} /></label>
+		<label class="field">Category<input class="input" bind:value={form.category} placeholder="e.g. Fashion" /></label>
 		<div class="btn-row">
 			<button class="btn btn-primary" type="submit">{editing ? 'Save' : 'Create'}</button>
 			{#if editing}<button class="btn btn-ghost" type="button" on:click={cancel}>Cancel</button>{/if}
 		</div>
 	</form>
+	{#if editing}
+		<div style="margin-top:0.75rem">
+			<label class="field">Photo (jpeg/png/webp/gif, max 5MB)
+				<input class="input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" on:change={pickFile} />
+			</label>
+			{#if previewUrl}<img src={previewUrl} alt="preview" style="max-width:220px;border-radius:8px;margin:0.4rem 0" />{/if}
+			<div class="btn-row">
+				<button class="btn btn-ghost" on:click={upload} disabled={!file || uploading}>{uploading ? 'Uploading…' : 'Upload photo'}</button>
+			</div>
+		</div>
+	{/if}
 	{#if msg}<p class="alert-ok">{msg}</p>{/if}
 </div>
 

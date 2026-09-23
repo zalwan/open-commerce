@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { api, formatIDR } from '$lib/api';
+	import { api, formatIDR, imgSrc } from '$lib/api';
 	import type { Product } from '$lib/api';
 	import { getSessionId } from '$lib/session';
 
@@ -40,7 +40,7 @@
 <li class="card">
 	<a class="thumb" href={`/products/${product.id}`} aria-label={product.name}>
 		{#if product.imageUrl}
-			<img src={product.imageUrl} alt={product.name} />
+			<img src={imgSrc(product.imageUrl)} alt={product.name} />
 		{:else}
 			{product.name.slice(0, 1)}
 		{/if}

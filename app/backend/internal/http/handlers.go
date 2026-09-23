@@ -3,9 +3,13 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/open-commerce/backend/internal/cart"
 	"github.com/open-commerce/backend/internal/catalog"
+	"github.com/open-commerce/backend/internal/media"
 	"github.com/open-commerce/backend/internal/order"
 )
 
@@ -53,12 +57,33 @@ func orderErr(w http.ResponseWriter, err error) {
 }
 
 func (h *handlers) listProducts(w http.ResponseWriter, r *http.Request) {
-	products, err := h.deps.Catalog.List(r.Context(), r.URL.Query().Get("q"))
+	q := r.URL.Query()
+	page, _ := strconv.Atoi(q.Get("page"))
+	perPage, _ := strconv.Atoi(q.Get("per_page"))
+	products, err := h.deps.Catalog.List(r.Context(), catalog.ListParams{
+		Q:        q.Get("q"),
+		Category: q.Get("category"),
+		Sort:     q.Get("sort"),
+		Page:     page,
+		PerPage:  perPage,
+	})
 	if err != nil {
 		catalogErr(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, products)
+}
+
+func (h *handlers) listCategories(w http.ResponseWriter, r *http.Request) {
+	cats, err := h.deps.Catalog.Categories(r.Context())
+	if err != nil {
+		catalogErr(w, err)
+		return
+	}
+	if cats == nil {
+		cats = []string{}
+	}
+	writeJSON(w, http.StatusOK, cats)
 }
 
 func (h *handlers) getProduct(w http.ResponseWriter, r *http.Request) {
@@ -105,6 +130,54 @@ func (h *handlers) deleteProduct(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// uploadImage stores a product photo (multipart field "image", max 5MB)
+// and sets the product ImageURL to the public /static/ path.
+func (h *handlers) uploadImage(w http.ResponseWriter, r *http.Request) {
+	if h.deps.Media == nil {
+		writeErr(w, http.StatusServiceUnavailable, "media store not configured")
+		return
+	}
+	id := r.PathValue("id")
+	url, err := h.deps.Media.SaveImage(id, r)
+	if err != nil {
+		switch {
+		case errors.Is(err, media.ErrTooBig):
+			writeErr(w, http.StatusRequestEntityTooLarge, err.Error())
+		case errors.Is(err, media.ErrBadType), errors.Is(err, media.ErrNoFile):
+			writeErr(w, http.StatusBadRequest, err.Error())
+		default:
+			writeErr(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+	p, err := h.deps.Catalog.Get(r.Context(), id)
+	if err != nil {
+		catalogErr(w, err)
+		return
+	}
+	p.ImageURL = url
+	updated, err := h.deps.Catalog.Update(r.Context(), p)
+	if err != nil {
+		catalogErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// serveStatic serves upload files without directory listing.
+func (h *handlers) serveStatic(w http.ResponseWriter, r *http.Request) {
+	if h.deps.Media == nil {
+		writeErr(w, http.StatusNotFound, "not found")
+		return
+	}
+	name := strings.TrimPrefix(r.URL.Path, "/static/")
+	if name == "" || strings.Contains(name, "/") || strings.HasPrefix(name, ".") {
+		writeErr(w, http.StatusNotFound, "not found")
+		return
+	}
+	http.ServeFile(w, r, filepath.Join(h.deps.Media.Dir(), name))
+}
+
 func (h *handlers) getCart(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("session_id")
 	c, err := h.deps.Cart.Get(r.Context(), sessionID)
@@ -137,6 +210,25 @@ func (h *handlers) addCartItem(w http.ResponseWriter, r *http.Request) {
 func (h *handlers) removeCartItem(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("session_id")
 	c, err := h.deps.Cart.RemoveItem(r.Context(), sessionID, r.PathValue("productID"))
+	if err != nil {
+		cartErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
+}
+
+type setQtyReq struct {
+	SessionID string `json:"session_id"`
+	ProductID string `json:"product_id"`
+	Qty       int    `json:"qty"`
+}
+
+func (h *handlers) setCartItemQty(w http.ResponseWriter, r *http.Request) {
+	var req setQtyReq
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	c, err := h.deps.Cart.SetQty(r.Context(), req.SessionID, req.ProductID, req.Qty)
 	if err != nil {
 		cartErr(w, err)
 		return
@@ -177,6 +269,19 @@ func (h *handlers) getOrder(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, o)
 }
 
+// listMyOrders returns public order history for one email (?email=).
+func (h *handlers) listMyOrders(w http.ResponseWriter, r *http.Request) {
+	orders, err := h.deps.Order.ListByEmail(r.Context(), r.URL.Query().Get("email"))
+	if err != nil {
+		orderErr(w, err)
+		return
+	}
+	if orders == nil {
+		orders = []order.Order{}
+	}
+	writeJSON(w, http.StatusOK, orders)
+}
+
 func (h *handlers) listOrders(w http.ResponseWriter, r *http.Request) {
 	orders, err := h.deps.Order.List(r.Context())
 	if err != nil {
@@ -187,6 +292,50 @@ func (h *handlers) listOrders(w http.ResponseWriter, r *http.Request) {
 		orders = []order.Order{}
 	}
 	writeJSON(w, http.StatusOK, orders)
+}
+
+type adminStats struct {
+	Products     int   `json:"products"`
+	Orders       int   `json:"orders"`
+	PaidOrders   int   `json:"paidOrders"`
+	RevenueMinor int64 `json:"revenueMinor"`
+	LowStock     int   `json:"lowStock"`
+}
+
+// adminStats aggregates shop numbers for the admin dashboard.
+func (h *handlers) adminStats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	stats := adminStats{}
+	for page := 1; ; page++ {
+		res, err := h.deps.Catalog.List(ctx, catalog.ListParams{Page: page, PerPage: 100})
+		if err != nil {
+			catalogErr(w, err)
+			return
+		}
+		stats.Products = res.Total
+		for _, p := range res.Items {
+			if p.Stock <= 5 {
+				stats.LowStock++
+			}
+		}
+		if len(res.Items) < res.PerPage {
+			break
+		}
+	}
+	orders, err := h.deps.Order.List(ctx)
+	if err != nil {
+		orderErr(w, err)
+		return
+	}
+	stats.Orders = len(orders)
+	for _, o := range orders {
+		switch o.Status {
+		case order.StatusPaid, order.StatusShipped, order.StatusDone:
+			stats.PaidOrders++
+			stats.RevenueMinor += o.TotalMinor
+		}
+	}
+	writeJSON(w, http.StatusOK, stats)
 }
 
 type statusReq struct {

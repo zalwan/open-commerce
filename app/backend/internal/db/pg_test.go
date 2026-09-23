@@ -49,12 +49,12 @@ func TestPostgresEndToEnd(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 	cat := catalog.NewService(catStore)
-	products, err := cat.List(ctx, "")
+	products, err := cat.List(ctx, catalog.ListParams{})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if len(products) != 3 {
-		t.Fatalf("expected 3 seeded products, got %d", len(products))
+	if len(products.Items) != 3 || products.Total != 3 {
+		t.Fatalf("expected 3 seeded products, got %+v", products)
 	}
 
 	created, err := cat.Create(ctx, catalog.Product{Name: "PG Widget", PriceMinor: 2500000, Stock: 7})

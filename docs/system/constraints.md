@@ -18,6 +18,7 @@
 
 ## Operational Constraints
 
+- Upload produk: maks 5MB, hanya jpeg/png/webp/gif (sniff content); nama file dari ID produk; tanpa directory listing di `/static/`.
 - `GET /healthz` (tanpa DB) dan `GET /readyz` (ping DB bila dikonfigurasi) wajib ada dan tanpa auth; dipakai probe Docker/K8s.
 - Konfigurasi via env + `config/app.yaml`; dilarang hardcode port/URL/credential di kode.
 - Upload file produk out-of-scope v0.1 — hanya URL gambar eksternal.

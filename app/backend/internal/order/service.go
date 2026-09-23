@@ -53,6 +53,7 @@ type Store interface {
 	Save(ctx context.Context, o Order) error
 	Get(ctx context.Context, id string) (Order, error)
 	List(ctx context.Context) ([]Order, error)
+	ListByEmail(ctx context.Context, email string) ([]Order, error)
 }
 
 // MemoryStore keeps orders process-local with an atomic sequence.
@@ -92,6 +93,19 @@ func (s *MemoryStore) List(_ context.Context) ([]Order, error) {
 	out := make([]Order, 0, len(s.orders))
 	for _, o := range s.orders {
 		out = append(out, *o)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
+	return out, nil
+}
+
+func (s *MemoryStore) ListByEmail(_ context.Context, email string) ([]Order, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := []Order{}
+	for _, o := range s.orders {
+		if o.Email == email {
+			out = append(out, *o)
+		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
 	return out, nil
@@ -170,6 +184,14 @@ func (s *Service) Get(ctx context.Context, id string) (Order, error) {
 
 func (s *Service) List(ctx context.Context) ([]Order, error) {
 	return s.store.List(ctx)
+}
+
+// ListByEmail returns a customer's own orders (public tracking).
+func (s *Service) ListByEmail(ctx context.Context, email string) ([]Order, error) {
+	if email == "" {
+		return nil, ErrBadEmail
+	}
+	return s.store.ListByEmail(ctx, email)
 }
 
 // SetStatus enforces a linear lifecycle.

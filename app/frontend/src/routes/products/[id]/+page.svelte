@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { api, formatIDR } from '$lib/api';
+	import { api, formatIDR, imgSrc } from '$lib/api';
 	import { getSessionId } from '$lib/session';
 
 	const id: string = $page.params.id ?? '';
@@ -25,7 +25,7 @@
 	<div class="detail">
 		<div class="thumb">
 			{#if p.imageUrl}
-				<img src={p.imageUrl} alt={p.name} />
+				<img src={imgSrc(p.imageUrl)} alt={p.name} />
 			{:else}
 				{p.name.slice(0, 1)}
 			{/if}

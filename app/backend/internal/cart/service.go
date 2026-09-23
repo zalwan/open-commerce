@@ -133,9 +133,6 @@ func (s *Service) AddItem(ctx context.Context, sessionID, productID string, qty 
 }
 
 func (s *Service) RemoveItem(ctx context.Context, sessionID, productID string) (Cart, error) {
-	if sessionID == "" {
-		return Cart{}, ErrEmptySession
-	}
 	c, err := s.Get(ctx, sessionID)
 	if err != nil {
 		return Cart{}, err
@@ -156,6 +153,46 @@ func (s *Service) RemoveItem(ctx context.Context, sessionID, productID string) (
 
 func (s *Service) Clear(ctx context.Context, sessionID string) error {
 	return s.store.Delete(ctx, sessionID)
+}
+
+// SetQty sets an absolute quantity; qty 0 removes the item.
+// The item must already be in the cart, else ErrNoProduct.
+func (s *Service) SetQty(ctx context.Context, sessionID, productID string, qty int) (Cart, error) {
+	if qty < 0 {
+		return Cart{}, ErrBadQty
+	}
+	if qty == 0 {
+		return s.RemoveItem(ctx, sessionID, productID)
+	}
+	p, err := s.catalog.Get(ctx, productID)
+	if err != nil {
+		return Cart{}, ErrNoProduct
+	}
+	if qty > p.Stock {
+		return Cart{}, ErrOutOfStock
+	}
+	c, err := s.Get(ctx, sessionID)
+	if err != nil {
+		return Cart{}, err
+	}
+	found := false
+	for i, it := range c.Items {
+		if it.ProductID == productID {
+			c.Items[i].Qty = qty
+			c.Items[i].PriceMinor = p.PriceMinor
+			c.Items[i].Name = p.Name
+			found = true
+			break
+		}
+	}
+	if !found {
+		return Cart{}, ErrNoProduct
+	}
+	c.recalc()
+	if err := s.store.Save(ctx, c); err != nil {
+		return Cart{}, err
+	}
+	return c, nil
 }
 
 func (c *Cart) recalc() {

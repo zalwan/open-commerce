@@ -1,15 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { api, formatIDR } from '$lib/api';
+	import { statusClass } from '$lib/ui';
 
 	const id: string = $page.params.id ?? '';
 
-	function statusClass(s: string): string {
-		if (s === 'paid' || s === 'done') return 'badge badge-ok';
-		if (s === 'pending' || s === 'shipped') return 'badge badge-info';
-		if (s === 'payment_failed') return 'badge badge-err';
-		return 'badge';
-	}
 </script>
 
 <div class="panel success-hero">

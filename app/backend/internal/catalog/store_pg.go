@@ -18,7 +18,7 @@ type PGStore struct {
 func NewPGStore(pool *pgxpool.Pool) *PGStore { return &PGStore{pool: pool} }
 
 func (s *PGStore) List(ctx context.Context) ([]Product, error) {
-	rows, err := s.pool.Query(ctx, `SELECT id, name, description, price_minor, currency, stock, image_url, created_at FROM products ORDER BY name`)
+	rows, err := s.pool.Query(ctx, `SELECT id, name, description, category, price_minor, currency, stock, image_url, created_at FROM products ORDER BY name`)
 	if err != nil {
 		return nil, fmt.Errorf("list products: %w", err)
 	}
@@ -26,7 +26,7 @@ func (s *PGStore) List(ctx context.Context) ([]Product, error) {
 	out := []Product{}
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.PriceMinor, &p.Currency, &p.Stock, &p.ImageURL, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Category, &p.PriceMinor, &p.Currency, &p.Stock, &p.ImageURL, &p.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan product: %w", err)
 		}
 		out = append(out, p)
@@ -36,8 +36,8 @@ func (s *PGStore) List(ctx context.Context) ([]Product, error) {
 
 func (s *PGStore) Get(ctx context.Context, id string) (Product, error) {
 	var p Product
-	err := s.pool.QueryRow(ctx, `SELECT id, name, description, price_minor, currency, stock, image_url, created_at FROM products WHERE id = $1`, id).
-		Scan(&p.ID, &p.Name, &p.Description, &p.PriceMinor, &p.Currency, &p.Stock, &p.ImageURL, &p.CreatedAt)
+	err := s.pool.QueryRow(ctx, `SELECT id, name, description, category, price_minor, currency, stock, image_url, created_at FROM products WHERE id = $1`, id).
+		Scan(&p.ID, &p.Name, &p.Description, &p.Category, &p.PriceMinor, &p.Currency, &p.Stock, &p.ImageURL, &p.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Product{}, ErrNotFound
 	}
@@ -49,13 +49,13 @@ func (s *PGStore) Get(ctx context.Context, id string) (Product, error) {
 
 func (s *PGStore) Save(ctx context.Context, p Product) error {
 	_, err := s.pool.Exec(ctx, `
-		INSERT INTO products (id, name, description, price_minor, currency, stock, image_url, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO products (id, name, description, category, price_minor, currency, stock, image_url, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (id) DO UPDATE SET
-			name = EXCLUDED.name, description = EXCLUDED.description,
+			name = EXCLUDED.name, description = EXCLUDED.description, category = EXCLUDED.category,
 			price_minor = EXCLUDED.price_minor, currency = EXCLUDED.currency,
 			stock = EXCLUDED.stock, image_url = EXCLUDED.image_url`,
-		p.ID, p.Name, p.Description, p.PriceMinor, p.Currency, p.Stock, p.ImageURL, p.CreatedAt)
+		p.ID, p.Name, p.Description, p.Category, p.PriceMinor, p.Currency, p.Stock, p.ImageURL, p.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("save product: %w", err)
 	}

@@ -3,6 +3,7 @@
 	import { api, formatIDR } from '$lib/api';
 	import type { Order } from '$lib/api';
 	import { getToken } from '$lib/session';
+	import { statusClass } from '$lib/ui';
 
 	let orders: Order[] = [];
 	let error = '';
@@ -10,12 +11,6 @@
 
 	const NEXT: Record<string, string> = { paid: 'shipped', shipped: 'done', payment_failed: 'cancelled' };
 
-	function statusClass(s: string): string {
-		if (s === 'paid' || s === 'done') return 'badge badge-ok';
-		if (s === 'shipped') return 'badge badge-info';
-		if (s === 'payment_failed') return 'badge badge-err';
-		return 'badge';
-	}
 
 	async function reload() {
 		const t = getToken();
@@ -53,7 +48,7 @@
 		{#each orders as o}
 			<li class="row">
 				<div class="grow">
-					<strong>{o.id}</strong> · {o.email}<br />
+					<a href={`/admin/orders/${o.id}`}><strong>{o.id}</strong></a> · {o.email}<br />
 					<span class="muted">{o.items.length} items · {formatIDR(o.totalMinor)}</span>
 					<span class={statusClass(o.status)}>{o.status}</span>
 				</div>

@@ -34,6 +34,7 @@ out/
 app/frontend/node_modules/
 app/frontend/.svelte-kit/
 app/backend/api
+app/backend/data/
 pgdata/
 
 # Secrets (never commit)

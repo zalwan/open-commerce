@@ -29,7 +29,7 @@
 
 ## Configuration
 
-- Backend: `PORT` (default `8080`), `DATABASE_URL` (kosong di v0.1 → memory store). Defaults di [`config/app.yaml`](../../config/app.yaml).
+- Backend: `PORT` (default `8080`), `DATABASE_URL` (kosong → memory store), `DATA_DIR` (default `./data/uploads` untuk foto produk). Defaults di [`config/app.yaml`](../../config/app.yaml).
 - Frontend: `PUBLIC_API_BASE_URL` (default `http://localhost:8080`).
 - Kredensial dummy dev-only: `admin@shop.test / admin123`, `customer@shop.test / customer123`. Bukan untuk prod.
 

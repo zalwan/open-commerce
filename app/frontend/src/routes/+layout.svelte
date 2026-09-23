@@ -28,6 +28,7 @@
 		<nav class="nav">
 			<a href="/">Catalog</a>
 			<a href="/cart">Cart{#if count > 0} <span class="cart-count">{count}</span>{/if}</a>
+			<a href="/orders/track">Track</a>
 			<a href="/admin">Admin</a>
 		</nav>
 	</div>
