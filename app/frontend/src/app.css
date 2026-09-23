@@ -1,22 +1,27 @@
-/* Open Commerce storefront — lightweight design system, no dependencies. */
+/* Open Commerce storefront — dark, mono, three.js-inspired design system. */
 
 :root {
-	--bg: #f8fafc;
-	--surface: #ffffff;
-	--text: #0f172a;
-	--muted: #64748b;
-	--border: #e2e8f0;
-	--brand: #059669;
-	--brand-dark: #047857;
-	--brand-soft: #ecfdf5;
-	--danger: #dc2626;
-	--danger-soft: #fef2f2;
-	--amber: #d97706;
-	--amber-soft: #fffbeb;
-	--blue: #2563eb;
-	--blue-soft: #eff6ff;
+	--bg: #09090b;
+	--surface: #101013;
+	--surface-2: #17171c;
+	--text: #f4f4f5;
+	--muted: #a1a1aa;
+	--border: rgb(255 255 255 / 0.09);
+	--brand: #34d399;
+	--brand-dim: #6ee7b7;
+	--brand-soft: rgb(52 211 153 / 0.12);
+	--accent: #22d3ee;
+	--danger: #f87171;
+	--danger-soft: rgb(248 113 113 / 0.12);
+	--amber: #fbbf24;
+	--amber-soft: rgb(251 191 36 / 0.12);
+	--blue: #60a5fa;
+	--blue-soft: rgb(96 165 250 / 0.12);
 	--radius: 12px;
-	--shadow: 0 1px 3px rgb(15 23 42 / 0.08), 0 4px 12px rgb(15 23 42 / 0.06);
+	--mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	--sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--shadow: 0 0 0 1px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.45);
+	--glow: 0 0 24px rgb(52 211 153 / 0.25);
 }
 
 * {
@@ -25,14 +30,33 @@
 
 body {
 	margin: 0;
-	background: var(--bg);
+	background:
+		radial-gradient(1200px 500px at 80% -10%, rgb(34 211 238 / 0.07), transparent 60%),
+		radial-gradient(900px 420px at 10% 0%, rgb(52 211 153 / 0.08), transparent 60%),
+		var(--bg);
 	color: var(--text);
-	font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	font-family: var(--sans);
 	line-height: 1.55;
+	min-height: 100vh;
 }
 
 a {
-	color: var(--brand-dark);
+	color: var(--brand-dim);
+}
+
+h1,
+h2 {
+	font-family: var(--mono);
+	letter-spacing: -0.02em;
+}
+
+code {
+	font-family: var(--mono);
+	font-size: 0.88em;
+	background: rgb(255 255 255 / 0.06);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	padding: 0.05rem 0.35rem;
 }
 
 /* ---- layout ---- */
@@ -41,7 +65,8 @@ a {
 	position: sticky;
 	top: 0;
 	z-index: 10;
-	background: var(--surface);
+	background: rgb(9 9 11 / 0.82);
+	backdrop-filter: blur(12px);
 	border-bottom: 1px solid var(--border);
 }
 
@@ -55,8 +80,9 @@ a {
 }
 
 .brand {
-	font-weight: 800;
-	font-size: 1.1rem;
+	font-family: var(--mono);
+	font-weight: 700;
+	font-size: 1.05rem;
 	color: var(--text);
 	text-decoration: none;
 	white-space: nowrap;
@@ -64,6 +90,7 @@ a {
 
 .brand span {
 	color: var(--brand);
+	text-shadow: 0 0 18px rgb(52 211 153 / 0.5);
 }
 
 .nav {
@@ -73,14 +100,17 @@ a {
 }
 
 .nav a {
+	font-family: var(--mono);
 	color: var(--muted);
 	text-decoration: none;
-	font-weight: 600;
-	font-size: 0.95rem;
+	font-weight: 500;
+	font-size: 0.85rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
 }
 
 .nav a:hover {
-	color: var(--text);
+	color: var(--brand-dim);
 }
 
 .container {
@@ -92,7 +122,8 @@ a {
 .footer {
 	border-top: 1px solid var(--border);
 	color: var(--muted);
-	font-size: 0.85rem;
+	font-family: var(--mono);
+	font-size: 0.78rem;
 	text-align: center;
 	padding: 1.25rem;
 }
@@ -102,10 +133,11 @@ a {
 .hero {
 	position: relative;
 	overflow: hidden;
-	background: linear-gradient(135deg, #064e3b, #059669);
+	background: linear-gradient(180deg, #0b0f0e 0%, #09090b 100%);
+	border: 1px solid var(--border);
 	color: #fff;
 	border-radius: var(--radius);
-	padding: 2rem 1.75rem;
+	padding: 2.5rem 1.75rem;
 	margin-bottom: 1.5rem;
 	box-shadow: var(--shadow);
 }
@@ -122,17 +154,27 @@ a {
 .hero-copy {
 	position: relative;
 	z-index: 1;
-	text-shadow: 0 1px 8px rgb(6 78 59 / 0.55);
+	text-shadow: 0 2px 16px rgb(0 0 0 / 0.8);
+}
+
+.hero-copy::before {
+	content: '// open-source commerce';
+	display: block;
+	font-family: var(--mono);
+	font-size: 0.78rem;
+	color: var(--brand);
+	letter-spacing: 0.08em;
+	margin-bottom: 0.5rem;
 }
 
 .hero h1 {
 	margin: 0 0 0.25rem;
-	font-size: 1.6rem;
+	font-size: 1.7rem;
 }
 
 .hero p {
 	margin: 0;
-	opacity: 0.9;
+	color: var(--muted);
 }
 
 /* ---- product grid ---- */
@@ -160,11 +202,13 @@ a {
 	box-shadow: var(--shadow);
 	display: flex;
 	flex-direction: column;
-	transition: transform 0.08s ease;
+	transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .card:hover {
-	transform: translateY(-2px);
+	transform: translateY(-3px);
+	border-color: rgb(52 211 153 / 0.4);
+	box-shadow: var(--shadow), var(--glow);
 }
 
 .thumb {
@@ -172,11 +216,13 @@ a {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	font-family: var(--mono);
 	font-size: 2.5rem;
-	font-weight: 800;
-	color: #fff;
-	background: linear-gradient(135deg, #10b981, #0ea5e9);
+	font-weight: 700;
+	color: #062e22;
+	background: linear-gradient(135deg, #34d399, #22d3ee);
 	text-transform: uppercase;
+	text-decoration: none;
 }
 
 .thumb img {
@@ -201,12 +247,14 @@ a {
 }
 
 .card-body a.title:hover {
-	color: var(--brand-dark);
+	color: var(--brand-dim);
 }
 
 .price {
-	font-weight: 800;
+	font-family: var(--mono);
+	font-weight: 700;
 	font-size: 1.05rem;
+	color: var(--brand-dim);
 }
 
 .meta {
@@ -218,32 +266,40 @@ a {
 
 .badge {
 	display: inline-block;
-	font-size: 0.75rem;
-	font-weight: 700;
-	padding: 0.1rem 0.55rem;
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	font-weight: 500;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	padding: 0.15rem 0.6rem;
 	border-radius: 999px;
-	background: #f1f5f9;
-	color: #475569;
+	border: 1px solid var(--border);
+	background: rgb(255 255 255 / 0.05);
+	color: var(--muted);
 	width: fit-content;
 }
 
 .badge-ok {
 	background: var(--brand-soft);
-	color: var(--brand-dark);
+	border-color: rgb(52 211 153 / 0.35);
+	color: var(--brand-dim);
 }
 
 .badge-warn {
 	background: var(--amber-soft);
+	border-color: rgb(251 191 36 / 0.35);
 	color: var(--amber);
 }
 
 .badge-err {
 	background: var(--danger-soft);
+	border-color: rgb(248 113 113 / 0.35);
 	color: var(--danger);
 }
 
 .badge-info {
 	background: var(--blue-soft);
+	border-color: rgb(96 165 250 / 0.35);
 	color: var(--blue);
 }
 
@@ -262,20 +318,24 @@ a {
 	font: inherit;
 	font-weight: 400;
 	padding: 0.55rem 0.7rem;
+	color: var(--text);
 	border: 1px solid var(--border);
 	border-radius: 8px;
-	background: var(--surface);
+	background: var(--surface-2);
 	width: 100%;
 }
 
 .input:focus {
-	outline: 2px solid var(--brand);
+	outline: none;
 	border-color: var(--brand);
+	box-shadow: 0 0 0 3px rgb(52 211 153 / 0.15);
 }
 
 .btn {
-	font: inherit;
+	font-family: var(--mono);
+	font-size: 0.88rem;
 	font-weight: 700;
+	letter-spacing: 0.02em;
 	padding: 0.55rem 1.1rem;
 	border-radius: 8px;
 	border: 1px solid transparent;
@@ -286,28 +346,35 @@ a {
 
 .btn-primary {
 	background: var(--brand);
-	color: #fff;
+	color: #06281d;
+	box-shadow: var(--glow);
 }
 
 .btn-primary:hover {
-	background: var(--brand-dark);
+	background: var(--brand-dim);
 }
 
 .btn-primary:disabled {
-	opacity: 0.6;
+	opacity: 0.5;
 	cursor: wait;
+	box-shadow: none;
 }
 
 .btn-danger {
 	background: var(--danger-soft);
 	color: var(--danger);
-	border-color: #fecaca;
+	border-color: rgb(248 113 113 / 0.35);
 }
 
 .btn-ghost {
 	background: transparent;
 	color: var(--text);
 	border-color: var(--border);
+}
+
+.btn-ghost:hover {
+	border-color: rgb(52 211 153 / 0.4);
+	color: var(--brand-dim);
 }
 
 .btn-row {
@@ -328,7 +395,7 @@ a {
 
 .panel h2 {
 	margin: 0 0 0.75rem;
-	font-size: 1.15rem;
+	font-size: 1.05rem;
 }
 
 /* ---- lists & tables ---- */
@@ -359,18 +426,20 @@ a {
 }
 
 .total {
+	font-family: var(--mono);
 	font-size: 1.15rem;
-	font-weight: 800;
+	font-weight: 700;
 	text-align: right;
 	margin: 1rem 0;
+	color: var(--brand-dim);
 }
 
 /* ---- alerts & misc ---- */
 
 .alert-error {
 	background: var(--danger-soft);
-	border: 1px solid #fecaca;
-	color: #991b1b;
+	border: 1px solid rgb(248 113 113 / 0.35);
+	color: #fca5a5;
 	border-radius: 8px;
 	padding: 0.6rem 0.9rem;
 	margin: 0.75rem 0;
@@ -378,8 +447,8 @@ a {
 
 .alert-ok {
 	background: var(--brand-soft);
-	border: 1px solid #a7f3d0;
-	color: #065f46;
+	border: 1px solid rgb(52 211 153 / 0.35);
+	color: var(--brand-dim);
 	border-radius: 8px;
 	padding: 0.6rem 0.9rem;
 	margin: 0.75rem 0;
@@ -393,7 +462,9 @@ a {
 	display: inline-block;
 	margin-bottom: 1rem;
 	text-decoration: none;
-	font-weight: 600;
+	font-family: var(--mono);
+	font-size: 0.85rem;
+	font-weight: 500;
 }
 
 .detail {
@@ -404,6 +475,7 @@ a {
 
 .detail .thumb {
 	border-radius: var(--radius);
+	border: 1px solid var(--border);
 	aspect-ratio: 16 / 10;
 	font-size: 4rem;
 }
