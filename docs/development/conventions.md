@@ -18,14 +18,16 @@
 
 ## Testing
 
-- Backend: `go test ./...` di `app/backend`. Service baru wajib unit test (validasi + happy/fail path). HTTP route baru wajib test status. Store PG baru wajib dicover integration test (`-tags integration`, butuh `DATABASE_URL`).
+- Backend: `go test ./...` di `app/backend`. Service baru wajib unit test (validasi + happy/fail path). HTTP route baru wajib test status. Store PG baru wajib dicover integration test (`-tags integration`).
+- Integration test me-`TRUNCATE` semua tabel — wajib target scratch DB (`opencommerce_test`), jangan pernah DB dev/demo:
+  `DATABASE_URL='postgres://opencommerce:opencommerce@localhost:5432/opencommerce_test?sslmode=disable' go test -tags integration ./...`.
 - Frontend: `npm run build` + `npm run check` wajib lolos bila disentuh routes/lib.
 - E2E smoke: `sh tests/smoke.sh` (butuh API di :8080); sertakan alur admin untuk perubahan admin.
 - Coverage target: domain services + transisi status teruji; HTML routes manual.
 
 ## Configuration and Secrets
 
-- Config berlapis: `config/app.yaml` (default) < env (`PORT`, `DATABASE_URL`, `PUBLIC_API_BASE_URL`).
+- Config berlapis: `config/app.yaml` (default) < env (`PORT`, `DATABASE_URL`, `DATA_DIR`, `PUBLIC_API_BASE_URL`).
 - Dilarang commit `.env` berisi secret, `*.pem/*.key`, dump DB. Kredensial di repo hanya dummy yang didokumentasikan.
 - Tambah env baru → update `config/app.yaml` + `setup.md` + `compose.yaml` bila relevan.
 

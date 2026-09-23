@@ -27,8 +27,11 @@ services:
     environment:
       PORT: "8080"
       DATABASE_URL: "postgres://opencommerce:opencommerce@db:5432/opencommerce?sslmode=disable"
+      DATA_DIR: "/data/uploads"
     ports:
       - "8080:8080"
+    volumes:
+      - apidata:/data
     depends_on:
       db:
         condition: service_healthy
@@ -51,3 +54,4 @@ services:
 
 volumes:
   pgdata:
+  apidata:

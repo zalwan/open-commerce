@@ -52,3 +52,34 @@ func TestGetMissingIsEmpty(t *testing.T) {
 		t.Fatalf("expected empty cart, got %+v", c)
 	}
 }
+
+func TestSetQty(t *testing.T) {
+	ctx := context.Background()
+	svc := NewService(NewMemoryStore(), testCatalog(t))
+	if _, err := svc.AddItem(ctx, "s-q", "p-test", 1); err != nil {
+		t.Fatal(err)
+	}
+	c, err := svc.SetQty(ctx, "s-q", "p-test", 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Subtotal != 30000 {
+		t.Fatalf("expected 30000, got %d", c.Subtotal)
+	}
+	c, err = svc.SetQty(ctx, "s-q", "p-test", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Items) != 0 {
+		t.Fatalf("expected removed item, got %+v", c)
+	}
+	if _, err := svc.SetQty(ctx, "s-q", "p-missing", 1); err != ErrNoProduct {
+		t.Fatalf("expected ErrNoProduct, got %v", err)
+	}
+	if _, err := svc.AddItem(ctx, "s-q", "p-test", 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SetQty(ctx, "s-q", "p-test", 99); err != ErrOutOfStock {
+		t.Fatalf("expected ErrOutOfStock, got %v", err)
+	}
+}

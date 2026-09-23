@@ -34,7 +34,11 @@ out/
 app/frontend/node_modules/
 app/frontend/.svelte-kit/
 app/backend/api
+app/backend/data/
 pgdata/
+
+# Runtime uploads (DATA_DIR default ./data/uploads, CWD-dependent)
+data/
 
 # Secrets (never commit)
 *.pem

@@ -14,6 +14,7 @@ import (
 	"github.com/open-commerce/backend/internal/catalog"
 	"github.com/open-commerce/backend/internal/db"
 	httpapi "github.com/open-commerce/backend/internal/http"
+	"github.com/open-commerce/backend/internal/media"
 	"github.com/open-commerce/backend/internal/order"
 	"github.com/open-commerce/backend/internal/payment"
 )
@@ -60,12 +61,19 @@ func main() {
 	orderSvc := order.NewService(orderStore, cartSvc, catalogSvc, pay)
 	authSvc := auth.NewService()
 
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		dataDir = "./data/uploads"
+	}
+	mediaStore := media.NewStore(dataDir, "/static/")
+
 	router := httpapi.NewRouter(httpapi.Deps{
 		Catalog: catalogSvc,
 		Cart:    cartSvc,
 		Order:   orderSvc,
 		Auth:    authSvc,
 		Pay:     pay,
+		Media:   mediaStore,
 		Ready:   ready,
 	}, logger)
 

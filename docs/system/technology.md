@@ -31,6 +31,7 @@
 | Store | Type | Purpose | Notes |
 |-------|------|---------|-------|
 | Postgres | Relational | Produk, cart, order persisten | v16; aktif bila `DATABASE_URL` terisi (migrasi auto-apply + seed-on-empty) |
+| Local disk (`DATA_DIR`) | Filesystem | Foto produk (`/static/`) | Default `./data/uploads`; volume `apidata` di compose; maks 5MB/file |
 | In-memory maps | Ephemeral (process-local) | Dev/test tanpa DB | Dipakai bila `DATABASE_URL` kosong |
 
 ## Infrastructure and Hosting

@@ -88,9 +88,9 @@ func (s *MemoryStore) IncrementStock(_ context.Context, id string, qty int) erro
 // SeedProducts is shared with PGStore.SeedIfEmpty so both backends start identical.
 func SeedProducts(now time.Time) []Product {
 	return []Product{
-		{ID: "p-kaos-hitam", Name: "Kaos Hitam", Description: "Kaos katun premium", PriceMinor: 12900000, Currency: "IDR", Stock: 50, CreatedAt: now},
-		{ID: "p-kopi-arabika", Name: "Kopi Arabika 250g", Description: "Biji kopi sangrai medium", PriceMinor: 8500000, Currency: "IDR", Stock: 100, CreatedAt: now},
-		{ID: "p-tas-kanvas", Name: "Tas Kanvas", Description: "Tas selempang kanvas", PriceMinor: 19900000, Currency: "IDR", Stock: 20, CreatedAt: now},
+		{ID: "p-kaos-hitam", Name: "Kaos Hitam", Description: "Kaos katun premium", Category: "Fashion", PriceMinor: 12900000, Currency: "IDR", Stock: 50, CreatedAt: now},
+		{ID: "p-kopi-arabika", Name: "Kopi Arabika 250g", Description: "Biji kopi sangrai medium", Category: "Food & Drink", PriceMinor: 8500000, Currency: "IDR", Stock: 100, CreatedAt: now},
+		{ID: "p-tas-kanvas", Name: "Tas Kanvas", Description: "Tas selempang kanvas", Category: "Fashion", PriceMinor: 19900000, Currency: "IDR", Stock: 20, CreatedAt: now},
 	}
 }
 

@@ -71,7 +71,21 @@ func (s *PGStore) Get(ctx context.Context, id string) (Order, error) {
 }
 
 func (s *PGStore) List(ctx context.Context) ([]Order, error) {
-	rows, err := s.pool.Query(ctx, `SELECT id, session_id, email, items, total_minor, currency, status, payment_tx, created_at FROM orders ORDER BY created_at DESC`)
+	return s.listWhere(ctx, "")
+}
+
+func (s *PGStore) ListByEmail(ctx context.Context, email string) ([]Order, error) {
+	return s.listWhere(ctx, email)
+}
+
+func (s *PGStore) listWhere(ctx context.Context, email string) ([]Order, error) {
+	query := `SELECT id, session_id, email, items, total_minor, currency, status, payment_tx, created_at FROM orders ORDER BY created_at DESC`
+	args := []any{}
+	if email != "" {
+		query = `SELECT id, session_id, email, items, total_minor, currency, status, payment_tx, created_at FROM orders WHERE email = $1 ORDER BY created_at DESC`
+		args = append(args, email)
+	}
+	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list orders: %w", err)
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/open-commerce/backend/internal/auth"
 	"github.com/open-commerce/backend/internal/cart"
 	"github.com/open-commerce/backend/internal/catalog"
+	"github.com/open-commerce/backend/internal/media"
 	"github.com/open-commerce/backend/internal/order"
 	"github.com/open-commerce/backend/internal/payment"
 )
@@ -23,6 +24,7 @@ type Deps struct {
 	Order   *order.Service
 	Auth    *auth.Service
 	Pay     payment.Provider
+	Media   *media.Store
 	// Ready is nil on memory store; set to a DB ping when Postgres is configured.
 	Ready func(ctx context.Context) error
 }
@@ -38,13 +40,16 @@ func NewRouter(d Deps, logger *slog.Logger) http.Handler {
 	mux.HandleFunc("GET /readyz", h.readyz)
 	// Catalog (public read).
 	mux.HandleFunc("GET /api/v1/products", h.listProducts)
+	mux.HandleFunc("GET /api/v1/categories", h.listCategories)
 	mux.HandleFunc("GET /api/v1/products/{id}", h.getProduct)
 	// Cart.
 	mux.HandleFunc("GET /api/v1/cart", h.getCart)
 	mux.HandleFunc("POST /api/v1/cart/items", h.addCartItem)
+	mux.HandleFunc("PUT /api/v1/cart/items", h.setCartItemQty)
 	mux.HandleFunc("DELETE /api/v1/cart/items/{productID}", h.removeCartItem)
 	// Orders.
 	mux.HandleFunc("POST /api/v1/orders/checkout", h.checkout)
+	mux.HandleFunc("GET /api/v1/orders", h.listMyOrders)
 	mux.HandleFunc("GET /api/v1/orders/{id}", h.getOrder)
 	// Auth stub.
 	mux.HandleFunc("POST /api/v1/auth/login", h.login)
@@ -53,8 +58,14 @@ func NewRouter(d Deps, logger *slog.Logger) http.Handler {
 	mux.HandleFunc("POST /api/v1/admin/products", h.requireAdmin(h.createProduct))
 	mux.HandleFunc("PUT /api/v1/admin/products/{id}", h.requireAdmin(h.updateProduct))
 	mux.HandleFunc("DELETE /api/v1/admin/products/{id}", h.requireAdmin(h.deleteProduct))
+	mux.HandleFunc("POST /api/v1/admin/products/{id}/image", h.requireAdmin(h.uploadImage))
 	mux.HandleFunc("GET /api/v1/admin/orders", h.requireAdmin(h.listOrders))
+	mux.HandleFunc("GET /api/v1/admin/stats", h.requireAdmin(h.adminStats))
 	mux.HandleFunc("POST /api/v1/admin/orders/{id}/status", h.requireAdmin(h.setOrderStatus))
+	// Public static files (product uploads). No directory listing.
+	if d.Media != nil {
+		mux.HandleFunc("GET /static/", h.serveStatic)
+	}
 
 	return withLogging(withCORS(mux), logger)
 }

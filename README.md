@@ -2,11 +2,12 @@
 
 An open source single-vendor e-commerce app (one seller): product catalog, cart, checkout, and operations admin. **Go** backend, **SvelteKit** frontend, **Postgres** database. MIT-licensed, fork-friendly.
 
-## Features (v0.2)
+## Features (v0.3)
 
-- **Storefront:** catalog + search, product detail, per-session cart, checkout, order success page.
+- **Storefront:** catalog with category filter, search, sort, and pagination; product detail; per-session cart with qty steppers; checkout with summary; order success page; order tracking by email.
+- **Product media:** admin photo upload (jpeg/png/webp/gif, 5MB max) served from `/static/`.
 - **Stock safety:** atomic reservation at checkout (409 when insufficient), restock on payment failure or cancel-from-paid.
-- **Admin:** login, product CRUD (create/edit/delete), order list, advance status (`paid → shipped → done`).
+- **Admin:** dashboard stats (products, orders, revenue, low stock); product CRUD + photo upload; order list/detail with status advance (`paid → shipped → done`).
 - **Versioned REST API** `/api/v1/*` — contract in [`docs/system/components.md`](docs/system/components.md).
 - **In-repo payment & auth stubs** (deterministic mocks, no real money) — replaced by real integrations via ADR.
 - **Two run modes:** memory (no DB, auto-seed) or Postgres (auto-applied migrations + seed-on-empty).
@@ -84,8 +85,9 @@ cd app/frontend && npm run check && npm run build
 ## Roadmap
 
 - v0.1 — foundation + skeleton ✅
-- v0.2 — Postgres + full admin ✅ (current)
-- v0.3 — candidates: real payment (sandbox), real auth (JWT/OAuth), `order_items` normalization, pagination/search, public deploy. Real payment/auth require an ADR.
+- v0.2 — Postgres + admin ✅
+- v0.3 — storefront completeness ✅ (current: categories, pagination, images, cart edit, order tracking, dashboard)
+- Next — candidates: real payment (sandbox, skipped for now), real auth (JWT/OAuth), public deploy. Real payment/auth require an ADR.
 
 Binding non-goals: multi-vendor/marketplace, native mobile, ERP sync (see [`docs/system/project.md`](docs/system/project.md)).
 

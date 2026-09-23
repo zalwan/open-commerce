@@ -166,3 +166,33 @@ func TestSetStatusLifecycle(t *testing.T) {
 		t.Fatalf("expected shipped, got %s", o.Status)
 	}
 }
+
+func TestListByEmail(t *testing.T) {
+	ctx := context.Background()
+	cat := catalog.NewService(catalog.NewMemoryStore())
+	if _, err := cat.Create(ctx, catalog.Product{ID: "p-t", Name: "T", PriceMinor: 1000, Stock: 10}); err != nil {
+		t.Fatal(err)
+	}
+	carts := cart.NewService(cart.NewMemoryStore(), cat)
+	svc := NewService(NewMemoryStore(), carts, cat, payment.NewStub())
+	for _, s := range []struct {
+		sess, email string
+	}{{"s-t1", "me@mail.test"}, {"s-t2", "me@mail.test"}, {"s-t3", "other@mail.test"}} {
+		if _, err := carts.AddItem(ctx, s.sess, "p-t", 1); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.Checkout(ctx, s.sess, s.email, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mine, err := svc.ListByEmail(ctx, "me@mail.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mine) != 2 {
+		t.Fatalf("expected 2 orders, got %d", len(mine))
+	}
+	if _, err := svc.ListByEmail(ctx, ""); err != ErrBadEmail {
+		t.Fatalf("expected ErrBadEmail, got %v", err)
+	}
+}

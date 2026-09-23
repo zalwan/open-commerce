@@ -4,9 +4,12 @@
 server:
   port: 8080            # override: PORT
 
+media:
+  data_dir: "./data/uploads"  # override: DATA_DIR (product images, max 5MB each)
+
 store:
-  # v0.1 uses in-memory. v0.2+ set DATABASE_URL, e.g. postgres://user:pass@localhost:5432/opencommerce?sslmode=disable
-  database_url: ""      # override: DATABASE_URL
+  # Empty DATABASE_URL → in-memory (dev). Set DATABASE_URL for Postgres persistence.
+  database_url: ""      # override: DATABASE_URL, e.g. postgres://user:pass@localhost:5432/opencommerce?sslmode=disable
 
 frontend:
   # SvelteKit public env; dev default points at local API.

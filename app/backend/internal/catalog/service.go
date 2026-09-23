@@ -4,6 +4,7 @@ package catalog
 import (
 	"context"
 	"errors"
+	"sort"
 	"strings"
 	"time"
 )
@@ -13,6 +14,7 @@ type Product struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description,omitempty"`
+	Category    string    `json:"category,omitempty"`
 	PriceMinor  int64     `json:"priceMinor"`
 	Currency    string    `json:"currency"`
 	Stock       int       `json:"stock"`
@@ -50,22 +52,92 @@ type Service struct {
 
 func NewService(store Store) *Service { return &Service{store: store} }
 
-// List returns all products, optionally filtered by case-insensitive name query.
-func (s *Service) List(ctx context.Context, q string) ([]Product, error) {
+// ListParams pages, filters and sorts the catalog. Page starts at 1.
+type ListParams struct {
+	Q        string
+	Category string
+	Sort     string // name_asc (default) | price_asc | price_desc | newest
+	Page     int
+	PerPage  int
+}
+
+// ListResult is a paginated product page.
+type ListResult struct {
+	Items   []Product `json:"items"`
+	Total   int       `json:"total"`
+	Page    int       `json:"page"`
+	PerPage int       `json:"perPage"`
+}
+
+// List filters by query/category in the service so memory and Postgres
+// behave identically; sorts and paginates the result.
+func (s *Service) List(ctx context.Context, p ListParams) (ListResult, error) {
+	all, err := s.store.List(ctx)
+	if err != nil {
+		return ListResult{}, err
+	}
+	q := strings.ToLower(strings.TrimSpace(p.Q))
+	cat := strings.ToLower(strings.TrimSpace(p.Category))
+	filtered := make([]Product, 0, len(all))
+	for _, pr := range all {
+		if q != "" && !strings.Contains(strings.ToLower(pr.Name), q) &&
+			!strings.Contains(strings.ToLower(pr.Description), q) {
+			continue
+		}
+		if cat != "" && strings.ToLower(pr.Category) != cat {
+			continue
+		}
+		filtered = append(filtered, pr)
+	}
+	switch p.Sort {
+	case "price_asc":
+		sort.Slice(filtered, func(i, j int) bool { return filtered[i].PriceMinor < filtered[j].PriceMinor })
+	case "price_desc":
+		sort.Slice(filtered, func(i, j int) bool { return filtered[i].PriceMinor > filtered[j].PriceMinor })
+	case "newest":
+		sort.Slice(filtered, func(i, j int) bool { return filtered[i].CreatedAt.After(filtered[j].CreatedAt) })
+	default:
+		sort.Slice(filtered, func(i, j int) bool { return filtered[i].Name < filtered[j].Name })
+	}
+	page, perPage := p.Page, p.PerPage
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 12
+	}
+	total := len(filtered)
+	start := (page - 1) * perPage
+	if start > total {
+		start = total
+	}
+	end := start + perPage
+	if end > total {
+		end = total
+	}
+	items := filtered[start:end]
+	if items == nil {
+		items = []Product{}
+	}
+	return ListResult{Items: items, Total: total, Page: page, PerPage: perPage}, nil
+}
+
+// Categories returns the distinct non-empty categories, sorted.
+func (s *Service) Categories(ctx context.Context) ([]string, error) {
 	all, err := s.store.List(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if q == "" {
-		return all, nil
-	}
-	q = strings.ToLower(q)
-	out := make([]Product, 0, len(all))
-	for _, p := range all {
-		if strings.Contains(strings.ToLower(p.Name), q) {
-			out = append(out, p)
+	seen := map[string]bool{}
+	out := []string{}
+	for _, pr := range all {
+		if pr.Category == "" || seen[pr.Category] {
+			continue
 		}
+		seen[pr.Category] = true
+		out = append(out, pr.Category)
 	}
+	sort.Strings(out)
 	return out, nil
 }
 
