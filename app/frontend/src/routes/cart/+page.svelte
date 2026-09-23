@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, formatIDR } from '$lib/api';
+	import { refreshCartCount } from '$lib/cart-count';
 	import { getSessionId } from '$lib/session';
 	import type { Cart } from '$lib/api';
 
@@ -23,6 +24,7 @@
 		error = '';
 		try {
 			cart = await api.setQty(getSessionId(), productId, qty);
+			void refreshCartCount();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to update';
 		}
@@ -32,6 +34,7 @@
 		error = '';
 		try {
 			cart = await api.removeFromCart(getSessionId(), productId);
+			void refreshCartCount();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to remove';
 		}

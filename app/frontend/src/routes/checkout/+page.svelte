@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { api, formatIDR } from '$lib/api';
 	import type { Cart } from '$lib/api';
+	import { refreshCartCount } from '$lib/cart-count';
 	import { getSessionId } from '$lib/session';
 
 	let email = '';
@@ -23,6 +24,7 @@
 		error = '';
 		try {
 			const order = await api.checkout(getSessionId(), email);
+			void refreshCartCount();
 			await goto(`/orders/${order.id}`);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : 'Checkout failed';

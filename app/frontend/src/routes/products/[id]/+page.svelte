@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { api, formatIDR, imgSrc } from '$lib/api';
+	import { refreshCartCount } from '$lib/cart-count';
 	import { getSessionId } from '$lib/session';
 
 	const id: string = $page.params.id ?? '';
@@ -13,6 +14,7 @@
 			await api.addToCart(getSessionId(), id, qty);
 			msg = 'Added to cart.';
 			isErr = false;
+			void refreshCartCount();
 		} catch (e) {
 			msg = e instanceof Error ? e.message : 'Failed';
 			isErr = true;

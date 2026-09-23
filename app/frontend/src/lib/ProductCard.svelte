@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api, formatIDR, imgSrc } from '$lib/api';
 	import type { Product } from '$lib/api';
+	import { refreshCartCount } from '$lib/cart-count';
 	import { getSessionId } from '$lib/session';
 
 	export let product: Product;
@@ -25,6 +26,7 @@
 		try {
 			await api.addToCart(getSessionId(), product.id, 1);
 			state = 'added';
+			void refreshCartCount();
 			setTimeout(() => {
 				if (state === 'added') state = 'idle';
 			}, 1200);
