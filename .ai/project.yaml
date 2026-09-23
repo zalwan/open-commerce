@@ -1,0 +1,44 @@
+# AI-Native Repository Standard v1.0 — Project Metadata
+# This file is machine-readable project metadata. It is NOT a documentation substitute.
+# Fill the empty values when adopting this template. Keep values technology-agnostic
+# in structure (free-form strings/lists); do not change the schema keys.
+
+standard:
+  name: "AI-Native Repository Standard"
+  version: "1.0"
+
+project:
+  name: ""
+  description: ""
+  status: ""      # e.g. draft | active | maintenance | archived
+  maturity: ""    # e.g. prototype | beta | production
+  owners: []      # e.g. ["team-or-contact"]
+
+technology:
+  languages: []
+  frameworks: []
+  runtimes: []
+  databases: []
+  infrastructure: []
+  cicd: []
+  observability: []
+  external_services: []
+
+architecture:
+  style: ""       # e.g. modular-monolith | layered | event-driven (project declares its own)
+  patterns: []
+
+documentation:
+  system: "docs/system"
+  decisions: "docs/decisions"
+  operations: "docs/operations"
+  development: "docs/development"
+
+ai:
+  instructions: ".ai"
+  root_agent_file: "AGENTS.md"
+  checklists:
+    - ".ai/checklists/feature.md"
+    - ".ai/checklists/bugfix.md"
+    - ".ai/checklists/refactor.md"
+    - ".ai/checklists/infrastructure.md"

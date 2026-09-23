@@ -1,0 +1,34 @@
+# AI-Native Repository Standard v1.0 — Generic ignore rules
+# Technology-specific entries belong to the adopting project.
+# Keep this file minimal; extend only for the project's actual stack.
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local environment
+.env
+.env.local
+*.local
+
+# Logs and temp
+*.log
+tmp/
+temp/
+
+# Build outputs (generic; refine per stack)
+dist/
+build/
+out/
+
+# Secrets (never commit)
+*.pem
+*.key
+secrets/
